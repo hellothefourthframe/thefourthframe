@@ -22,6 +22,7 @@ export async function POST(request: Request) {
         { error: "Invalid credentials" },
         { status: 401 }
       );
+
     }
 
     const isValid = await bcrypt.compare(password, admin.password);

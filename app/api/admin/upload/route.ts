@@ -4,7 +4,9 @@ import { existsSync } from "fs";
 import path from "path";
 import { getAdminFromCookies } from "@/app/lib/auth";
 
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
+const PUBLIC_DIR = path.join(process.cwd(), "public");
+const UPLOAD_DIR = path.join(PUBLIC_DIR, "uploads");
+
 const imageExtensions: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/jpg": ".jpg",
@@ -16,6 +18,7 @@ const imageExtensions: Record<string, string> = {
 async function ensureUploadDir() {
   if (!existsSync(UPLOAD_DIR)) {
     await mkdir(UPLOAD_DIR, { recursive: true });
+    console.log("Upload directory created:", UPLOAD_DIR);
   }
 }
 
@@ -27,14 +30,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Create upload folder if it doesn't exist
     await ensureUploadDir();
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    const type = formData.get("type") as string | null; // "image" or "video"
+    const type = formData.get("type") as string | null;
 
     if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+      return NextResponse.json(
+        { error: "No file provided" },
+        { status: 400 }
+      );
     }
 
     // Validate file type
@@ -61,20 +68,25 @@ export async function POST(request: Request) {
 
     // Generate unique filename
     const ext = type === "image" ? imageExtensions[file.type] : ".mp4";
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+    const uniqueName = `${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}${ext}`;
+
     const filePath = path.join(UPLOAD_DIR, uniqueName);
 
-    // Write file to disk
+    // Save file
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+
     await writeFile(filePath, buffer);
 
-    // Return the public URL path
-    const publicPath = `/uploads/${uniqueName}`;
-
-    return NextResponse.json({ success: true, path: publicPath });
+    return NextResponse.json({
+      success: true,
+      path: `/uploads/${uniqueName}`,
+    });
   } catch (error) {
     console.error("Upload error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -99,7 +111,7 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const fullPath = path.join(process.cwd(), "public", filePath);
+    const fullPath = path.join(PUBLIC_DIR, filePath);
 
     if (existsSync(fullPath)) {
       await unlink(fullPath);
@@ -108,6 +120,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Delete file error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const https = require('https');
 
 https.get('https://cloudflare-dns.com/dns-query?name=_mongodb._tcp.thefourthframe.ivm4g4z.mongodb.net&type=SRV', {

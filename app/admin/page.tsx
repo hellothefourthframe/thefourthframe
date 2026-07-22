@@ -4,6 +4,26 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { ModelSubmission, SiteContent } from "@/app/lib/types";
 
+type UploadResponse = {
+  success?: boolean;
+  path?: string;
+  pathname?: string;
+  error?: string;
+};
+
+function isManagedUploadPath(filePath: string) {
+  if (filePath.startsWith("/uploads/")) {
+    return true;
+  }
+
+  try {
+    const url = new URL(filePath);
+    return url.protocol === "https:" && url.hostname.endsWith(".public.blob.vercel-storage.com");
+  } catch {
+    return false;
+  }
+}
+
 // ─────────────────────────────────────────────────────────
 // Admin Dashboard — Single-page editor for all site content
 // ─────────────────────────────────────────────────────────
@@ -66,11 +86,17 @@ export default function AdminDashboard() {
     form.append("type", type);
     try {
       const res = await fetch("/api/admin/upload", { method: "POST", body: form });
-      const data = await res.json();
+      const data = (await res.json()) as UploadResponse;
       if (!res.ok) {
         showToast(data.error || "Upload failed", "err");
         return null;
       }
+
+      if (data.success === false || !data.path) {
+        showToast(data.error || "Upload failed", "err");
+        return null;
+      }
+
       return data.path;
     } catch {
       showToast("Upload failed", "err");
@@ -79,6 +105,8 @@ export default function AdminDashboard() {
   };
 
   const deleteFile = async (filePath: string) => {
+    if (!isManagedUploadPath(filePath)) return;
+
     try {
       await fetch("/api/admin/upload", {
         method: "DELETE",
@@ -299,7 +327,7 @@ function HeroSection({ content, onSave, onUpload, onDelete }: SectionProps) {
     const path = await onUpload(file, "video");
     if (path) {
       // Delete old file if it's an uploaded one
-      if (hero[field].startsWith("/uploads/") && onDelete) {
+      if (isManagedUploadPath(hero[field]) && onDelete) {
         await onDelete(hero[field]);
       }
       setHero({ ...hero, [field]: path });
@@ -309,7 +337,7 @@ function HeroSection({ content, onSave, onUpload, onDelete }: SectionProps) {
   };
 
   const removeVideo = async (field: "desktopVideo" | "mobileVideo") => {
-    if (hero[field].startsWith("/uploads/") && onDelete) {
+    if (isManagedUploadPath(hero[field]) && onDelete) {
       await onDelete(hero[field]);
     }
     setHero({ ...hero, [field]: "" });
@@ -363,7 +391,7 @@ function FoundersSection({ content, onSave, onUpload, onDelete }: SectionProps) 
     setUploading(i);
     const path = await onUpload(file, "image");
     if (path) {
-      if (founders[i].image.startsWith("/uploads/") && onDelete) {
+      if (isManagedUploadPath(founders[i].image) && onDelete) {
         await onDelete(founders[i].image);
       }
       update(i, "image", path);
@@ -429,7 +457,7 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
     setUploading(i);
     const path = await onUpload(file, "image");
     if (path) {
-      if (services[i].image.startsWith("/uploads/") && onDelete) {
+      if (isManagedUploadPath(services[i].image) && onDelete) {
         await onDelete(services[i].image);
       }
       updateService(i, "image", path);
@@ -440,7 +468,7 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
 
   const removeServiceImage = async (i: number) => {
     const imagePath = services[i]?.image;
-    if (imagePath?.startsWith("/uploads/") && onDelete) {
+    if (imagePath && isManagedUploadPath(imagePath) && onDelete) {
       await onDelete(imagePath);
     }
     updateService(i, "image", "");
@@ -563,7 +591,7 @@ function ModelsSection({ content, onSave, onUpload, onDelete }: SectionProps) {
     setUploading(i);
     const path = await onUpload(file, "image");
     if (path) {
-      if (models[i].image.startsWith("/uploads/") && onDelete) {
+      if (isManagedUploadPath(models[i].image) && onDelete) {
         await onDelete(models[i].image);
       }
       updateModel(i, "image", path);
@@ -754,7 +782,7 @@ function FooterSection({ content, onSave, onUpload, onDelete }: SectionProps) {
     const path = await onUpload(file, "video");
 
     if (path) {
-      if (footer.ctaVideoSrc.startsWith("/uploads/") && onDelete) {
+      if (isManagedUploadPath(footer.ctaVideoSrc) && onDelete) {
         await onDelete(footer.ctaVideoSrc);
       }
       setFooter({ ...footer, ctaVideoSrc: path });
@@ -765,7 +793,7 @@ function FooterSection({ content, onSave, onUpload, onDelete }: SectionProps) {
   };
 
   const removeCtaVideo = async () => {
-    if (footer.ctaVideoSrc.startsWith("/uploads/") && onDelete) {
+    if (isManagedUploadPath(footer.ctaVideoSrc) && onDelete) {
       await onDelete(footer.ctaVideoSrc);
     }
 

@@ -37,7 +37,7 @@ export default function About() {
             transition={{ duration: 1 }}
           >
             <Image
-              src="https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&q=80&w=800"
+              src="/main/CFD.jpeg"
               alt="Studio portrait setup"
               fill
               className="about-image"

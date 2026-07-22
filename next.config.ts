@@ -22,11 +22,6 @@ const nextConfig: NextConfig = {
         hostname: "*.fbcdn.net",
         pathname: "/**",
       },
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-        pathname: "/**",
-      },
     ],
   },
 };

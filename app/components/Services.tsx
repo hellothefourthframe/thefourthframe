@@ -20,6 +20,9 @@ interface ServicesProps {
 export default function Services({ servicesSection, services }: ServicesProps) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const visibleServices = services.filter(
+    (service) => service.title.trim() && service.image.trim()
+  );
 
   return (
     <section className="section bg-white anchor-section" id="services" ref={ref}>
@@ -44,9 +47,9 @@ export default function Services({ servicesSection, services }: ServicesProps) {
         </div>
 
         <div className="services-grid-premium">
-          {services.map((s, i) => (
+          {visibleServices.map((s, i) => (
             <motion.div
-              key={s.title + i}
+              key={`${s.title}-${s.image}-${i}`}
               className="service-showcase-card"
               initial={{ opacity: 0, y: 30 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}

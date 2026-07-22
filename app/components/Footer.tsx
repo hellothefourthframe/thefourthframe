@@ -77,8 +77,9 @@ export default function Footer({ site, socialLinks, footer }: FooterProps) {
           className="footer-top-band flex-center-vertical"
           style={{ position: "relative", overflow: "hidden" }}
         >
-          {shouldLoadBandVideo ? (
+          {shouldLoadBandVideo && footer.ctaVideoSrc ? (
             <video
+              key={footer.ctaVideoSrc}
               autoPlay
               loop
               muted

@@ -41,18 +41,8 @@ export interface Founder {
   image: string;
 }
 
-export interface ServiceImages {
-  talent: string;
-  production: string;
-  locations: string;
-  backstage: string;
-  brandShoot: string;
-  editors: string;
-  bts: string;
-}
-
 export interface Service {
-  index: string;
+  index?: string;
   title: string;
   description: string;
   image: string;
@@ -76,6 +66,19 @@ export interface ContactSectionData {
   submitButtonText: string;
   successTitle: string;
   successMessage: string;
+}
+
+export interface ModelSubmission {
+  _id?: string;
+  fullname: string;
+  email: string;
+  contact: string;
+  age: string;
+  height: string;
+  city: string;
+  images: string[];
+  video: string | null;
+  createdAt: string;
 }
 
 export interface FooterTeamMember {
@@ -104,7 +107,6 @@ export interface SiteContent {
   foundersSection: SectionHeader;
   founders: Founder[];
   servicesSection: SectionHeader;
-  serviceImages: ServiceImages;
   services: Service[];
   modelsSection: SectionHeader;
   models: Model[];

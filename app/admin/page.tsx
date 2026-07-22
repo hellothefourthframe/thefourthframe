@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import type { SiteContent } from "@/app/lib/types";
+import type { ModelSubmission, SiteContent } from "@/app/lib/types";
 
 // ─────────────────────────────────────────────────────────
 // Admin Dashboard — Single-page editor for all site content
@@ -177,10 +177,10 @@ export default function AdminDashboard() {
             <ModelsSection content={content} onSave={saveContent} onUpload={uploadFile} onDelete={deleteFile} />
           )}
           {activeSection === "contact" && (
-            <ContactSection content={content} onSave={saveContent} />
+            <ContactSection showToast={showToast} />
           )}
           {activeSection === "footer" && (
-            <FooterSection content={content} onSave={saveContent} />
+            <FooterSection content={content} onSave={saveContent} onUpload={uploadFile} onDelete={deleteFile} />
           )}
         </div>
       </main>
@@ -414,7 +414,6 @@ function FoundersSection({ content, onSave, onUpload, onDelete }: SectionProps) 
 // ── SERVICES ──────────────────────────────────────────
 function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) {
   const [section, setSection] = useState(content.servicesSection);
-  const [serviceImages, setServiceImages] = useState(content.serviceImages);
   const [services, setServices] = useState(content.services);
   const [uploading, setUploading] = useState<number | null>(null);
 
@@ -439,6 +438,39 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
     e.target.value = "";
   };
 
+  const removeServiceImage = async (i: number) => {
+    const imagePath = services[i]?.image;
+    if (imagePath?.startsWith("/uploads/") && onDelete) {
+      await onDelete(imagePath);
+    }
+    updateService(i, "image", "");
+  };
+
+  const addService = () => {
+    setServices([
+      ...services,
+      {
+        title: "",
+        description: "",
+        image: "",
+        details: "",
+        includes: [],
+      },
+    ]);
+  };
+
+  const saveServices = () => {
+    const normalizedServices = services.map((service) => ({
+      title: service.title,
+      description: service.description,
+      image: service.image,
+      details: service.details,
+      includes: Array.isArray(service.includes) ? service.includes : [],
+    }));
+
+    onSave({ servicesSection: section, services: normalizedServices });
+  };
+
   return (
     <div style={S.sectionWrap}>
       <div style={S.subGroup}>
@@ -448,38 +480,41 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
         <Field label="Title Accent" value={section.titleAccent} onChange={(v) => setSection({ ...section, titleAccent: v })} />
       </div>
 
-      <div style={S.subGroup}>
-        <h3 style={S.subTitle}>Service Images (Unsplash / Static)</h3>
-        {(Object.keys(serviceImages) as Array<keyof typeof serviceImages>).map((key) => (
-          <Field key={key} label={key} value={serviceImages[key]} onChange={(v) => setServiceImages({ ...serviceImages, [key]: v })} />
-        ))}
-      </div>
-
       <h3 style={S.subTitle}>Services</h3>
+      <p style={S.hint}>Service cards use only the image saved in the database. Upload an image for every service you want visible on the site.</p>
       {services.map((service, i) => (
         <div key={i} style={S.card}>
           <div style={S.cardHeader}>
-            <h4 style={S.cardTitle}>{service.title || `Service #${i + 1}`}</h4>
+            <div style={S.cardTitleField}>
+              <label style={S.fieldLabel}>Service Name</label>
+              <input
+                style={S.fieldInput}
+                value={service.title}
+                placeholder="Type service name"
+                onChange={(e) => updateService(i, "title", e.target.value)}
+              />
+            </div>
             <button style={S.removeBtn} onClick={() => setServices(services.filter((_, j) => j !== i))}>Remove</button>
           </div>
-          <Field label="Index" value={service.index} onChange={(v) => updateService(i, "index", v)} />
-          <Field label="Title" value={service.title} onChange={(v) => updateService(i, "title", v)} />
           <FieldTextarea label="Description" value={service.description} onChange={(v) => updateService(i, "description", v)} />
           <Field label="Details" value={service.details} onChange={(v) => updateService(i, "details", v)} />
 
-          {/* Image */}
-          {service.image && (
+          {service.image ? (
             <div style={S.mediaPreview}>
               <img src={service.image} alt={service.title} style={S.previewImg} />
-              <span style={S.mediaPath}>{service.image}</span>
+              <div style={S.mediaActions}>
+                <span style={S.mediaStatus}>Image set</span>
+                <button style={S.removeBtn} onClick={() => removeServiceImage(i)}>Remove Image</button>
+              </div>
             </div>
+          ) : (
+            <p style={S.noMedia}>No image uploaded for this service.</p>
           )}
           <label style={S.uploadLabel}>
-            {uploading === i ? "Uploading..." : "Upload JPEG"}
-            <input type="file" accept="image/jpeg" onChange={(e) => handleImageUpload(e, i)} style={S.fileInput} disabled={uploading !== null} />
+            {uploading === i ? "Uploading..." : "Upload Image"}
+            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => handleImageUpload(e, i)} style={S.fileInput} disabled={uploading !== null} />
           </label>
 
-          {/* Includes */}
           <div style={{ marginTop: "1rem" }}>
             <h5 style={{ ...S.subTitle, fontSize: "0.7rem" }}>Includes</h5>
             {service.includes.map((item, j) => (
@@ -504,8 +539,8 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
         </div>
       ))}
 
-      <button style={S.addBtn} onClick={() => setServices([...services, { index: String(services.length + 1).padStart(2, "0"), title: "", description: "", image: "", details: "", includes: [] }])}>+ Add Service</button>
-      <button style={S.saveBtn} onClick={() => onSave({ servicesSection: section, serviceImages, services })}>Save Services</button>
+      <button style={S.addBtn} onClick={addService}>+ Add Service</button>
+      <button style={S.saveBtn} onClick={saveServices}>Save Services</button>
     </div>
   );
 }
@@ -580,50 +615,184 @@ function ModelsSection({ content, onSave, onUpload, onDelete }: SectionProps) {
 }
 
 // ── CONTACT ───────────────────────────────────────────
-function ContactSection({ content, onSave }: SectionProps) {
-  const [contact, setContact] = useState(content.contactSection);
-  const [interests, setInterests] = useState(content.contactFormInterests);
+function ContactSection({ showToast }: { showToast: (msg: string, type?: "ok" | "err") => void }) {
+  const [submissions, setSubmissions] = useState<ModelSubmission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const loadSubmissions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/model-submissions");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load submissions");
+      setSubmissions(data.submissions || []);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Failed to load submissions", "err");
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    loadSubmissions();
+  }, [loadSubmissions]);
+
+  const deleteSubmission = async (id?: string) => {
+    if (!id) return;
+
+    setDeletingId(id);
+    try {
+      const res = await fetch("/api/model-submissions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Delete failed");
+      setSubmissions((prev) => prev.filter((submission) => submission._id !== id));
+      showToast("Submission deleted");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Delete failed", "err");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div style={S.sectionWrap}>
-      <Field label="Label" value={contact.label} onChange={(v) => setContact({ ...contact, label: v })} />
-      <Field label="Title" value={contact.title} onChange={(v) => setContact({ ...contact, title: v })} />
-      <Field label="Title Accent" value={contact.titleAccent} onChange={(v) => setContact({ ...contact, titleAccent: v })} />
-      <Field label="Submit Button Text" value={contact.submitButtonText} onChange={(v) => setContact({ ...contact, submitButtonText: v })} />
-      <Field label="Success Title" value={contact.successTitle} onChange={(v) => setContact({ ...contact, successTitle: v })} />
-      <FieldTextarea label="Success Message" value={contact.successMessage} onChange={(v) => setContact({ ...contact, successMessage: v })} />
-
-      <div style={S.subGroup}>
-        <h3 style={S.subTitle}>Form Interests</h3>
-        {interests.map((item, i) => (
-          <div key={i} style={S.row}>
-            <input
-              style={S.inputFlex}
-              value={item}
-              onChange={(e) => {
-                const arr = [...interests];
-                arr[i] = e.target.value;
-                setInterests(arr);
-              }}
-            />
-            <button style={S.removeBtn} onClick={() => setInterests(interests.filter((_, j) => j !== i))}>✕</button>
-          </div>
-        ))}
-        <button style={S.addBtnSmall} onClick={() => setInterests([...interests, ""])}>+ Add Interest</button>
+      <div style={S.cardHeader}>
+        <p style={S.hint}>
+          Model form submissions from the website. Deleting a card also deletes its uploaded images and video.
+        </p>
+        <button style={S.addBtnSmall} onClick={loadSubmissions} disabled={loading}>
+          Refresh
+        </button>
       </div>
 
-      <button style={S.saveBtn} onClick={() => onSave({ contactSection: contact, contactFormInterests: interests })}>Save Contact</button>
+      {loading ? <p style={S.noMedia}>Loading submissions...</p> : null}
+
+      {!loading && submissions.length === 0 ? (
+        <div style={S.card}>
+          <h3 style={S.cardTitle}>No submissions yet</h3>
+          <p style={S.noMedia}>New model applications will appear here after users submit the form.</p>
+        </div>
+      ) : null}
+
+      {submissions.map((submission) => (
+        <div key={submission._id} style={S.card}>
+          <div style={S.cardHeader}>
+            <div>
+              <h3 style={S.cardTitle}>{submission.fullname}</h3>
+              <p style={{ ...S.noMedia, margin: "0.35rem 0 0" }}>
+                {new Date(submission.createdAt).toLocaleString()}
+              </p>
+            </div>
+            <button
+              style={S.removeBtn}
+              onClick={() => deleteSubmission(submission._id)}
+              disabled={deletingId === submission._id}
+            >
+              {deletingId === submission._id ? "Deleting..." : "Delete"}
+            </button>
+          </div>
+
+          <div style={S.submissionMetaGrid}>
+            <SubmissionMeta label="Email" value={submission.email} />
+            <SubmissionMeta label="Contact" value={submission.contact} />
+            <SubmissionMeta label="Age" value={submission.age} />
+            <SubmissionMeta label="Height" value={submission.height} />
+            <SubmissionMeta label="City" value={submission.city} />
+          </div>
+
+          <div style={S.subGroup}>
+            <h4 style={S.subTitle}>Images</h4>
+            <div style={S.submissionImageGrid}>
+              {submission.images.map((imagePath) => (
+                <a key={imagePath} href={imagePath} target="_blank" rel="noreferrer" style={S.submissionMediaLink}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={imagePath} alt={submission.fullname} style={S.submissionImg} />
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {submission.video ? (
+            <div style={S.subGroup}>
+              <h4 style={S.subTitle}>Video</h4>
+              <video src={submission.video} style={S.previewVideo} controls />
+              <a href={submission.video} target="_blank" rel="noreferrer" style={S.mediaPath}>
+                {submission.video}
+              </a>
+            </div>
+          ) : null}
+        </div>
+      ))}
     </div>
   );
 }
 
 // ── FOOTER ────────────────────────────────────────────
-function FooterSection({ content, onSave }: SectionProps) {
+function SubmissionMeta({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={S.submissionMetaItem}>
+      <span style={S.fieldLabel}>{label}</span>
+      <strong style={S.submissionMetaValue}>{value}</strong>
+    </div>
+  );
+}
+
+function FooterSection({ content, onSave, onUpload, onDelete }: SectionProps) {
   const [footer, setFooter] = useState(content.footer);
+  const [uploading, setUploading] = useState(false);
+
+  const handleCtaVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUpload) return;
+
+    setUploading(true);
+    const path = await onUpload(file, "video");
+
+    if (path) {
+      if (footer.ctaVideoSrc.startsWith("/uploads/") && onDelete) {
+        await onDelete(footer.ctaVideoSrc);
+      }
+      setFooter({ ...footer, ctaVideoSrc: path });
+    }
+
+    setUploading(false);
+    e.target.value = "";
+  };
+
+  const removeCtaVideo = async () => {
+    if (footer.ctaVideoSrc.startsWith("/uploads/") && onDelete) {
+      await onDelete(footer.ctaVideoSrc);
+    }
+
+    setFooter({ ...footer, ctaVideoSrc: "" });
+  };
 
   return (
     <div style={S.sectionWrap}>
-      <Field label="CTA Video Src" value={footer.ctaVideoSrc} onChange={(v) => setFooter({ ...footer, ctaVideoSrc: v })} />
+      <div style={S.card}>
+        <h3 style={S.cardTitle}>CTA Video</h3>
+        <p style={S.hint}>Upload MP4 video. Save Footer after upload to show it on the website.</p>
+        {footer.ctaVideoSrc ? (
+          <div style={S.mediaPreview}>
+            <video src={footer.ctaVideoSrc} style={S.previewVideo} controls muted />
+            <div style={S.mediaActions}>
+              <span style={S.mediaPath}>{footer.ctaVideoSrc}</span>
+              <button style={S.removeBtn} onClick={removeCtaVideo}>Remove</button>
+            </div>
+          </div>
+        ) : (
+          <p style={S.noMedia}>No CTA video set</p>
+        )}
+        <label style={S.uploadLabel}>
+          {uploading ? "Uploading..." : "Upload MP4"}
+          <input type="file" accept="video/mp4" onChange={handleCtaVideoUpload} style={S.fileInput} disabled={uploading} />
+        </label>
+      </div>
       <FieldTextarea label="CTA Headline" value={footer.ctaHeadline} onChange={(v) => setFooter({ ...footer, ctaHeadline: v })} />
       <FieldTextarea label="Description" value={footer.description} onChange={(v) => setFooter({ ...footer, description: v })} />
 
@@ -909,6 +1078,12 @@ const S: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     margin: 0,
   },
+  cardTitleField: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "0.35rem",
+  },
   row: {
     display: "flex",
     gap: "0.5rem",
@@ -1015,10 +1190,53 @@ const S: Record<string, React.CSSProperties> = {
     borderRadius: "8px",
     border: "1px solid rgba(255,255,255,0.1)",
   },
+  submissionMetaGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+    gap: "0.75rem",
+  },
+  submissionMetaItem: {
+    background: "rgba(255,255,255,0.03)",
+    border: "1px solid rgba(255,255,255,0.06)",
+    borderRadius: "8px",
+    padding: "0.75rem",
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "0.35rem",
+  },
+  submissionMetaValue: {
+    color: "#fff",
+    fontSize: "0.86rem",
+    fontWeight: 600,
+    wordBreak: "break-word" as const,
+  },
+  submissionImageGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
+    gap: "0.75rem",
+  },
+  submissionMediaLink: {
+    display: "block",
+    borderRadius: "8px",
+    overflow: "hidden",
+    border: "1px solid rgba(255,255,255,0.1)",
+    background: "rgba(255,255,255,0.04)",
+  },
+  submissionImg: {
+    width: "100%",
+    aspectRatio: "1 / 1",
+    objectFit: "cover" as const,
+    display: "block",
+  },
   mediaPath: {
     color: "rgba(255,255,255,0.35)",
     fontSize: "0.72rem",
     wordBreak: "break-all" as const,
+  },
+  mediaStatus: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: "0.72rem",
+    fontWeight: 600,
   },
   mediaActions: {
     display: "flex",

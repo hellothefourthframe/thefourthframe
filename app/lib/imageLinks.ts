@@ -4,7 +4,6 @@ export {
   HERO_BACKGROUND_IMAGE as heroBackgroundImage,
   HERO_PREVIEW_IMAGES as heroPreviewImages,
   TALENT_IMAGE_POOL as talentImagePool,
-  SERVICE_IMAGES as serviceImages,
   PORTFOLIO_IMAGE_POOL as portfolioImagePool,
   LOCATION_IMAGE_POOL as locationImagePool,
 } from "./constants";

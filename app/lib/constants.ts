@@ -78,19 +78,6 @@ export const FOUNDERS = [
 
 // ── Services Section ───────────────────────────────────
 
-const unsplash = (id: string, w: number, h: number) =>
-  `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&h=${h}&q=82`;
-
-export const SERVICE_IMAGES = {
-  talent: unsplash("1610296669228-602fa827fc1f", 1200, 1200),
-  production: unsplash("1583939003579-730e3918a45a", 1200, 1200),
-  locations: unsplash("1494526585095-c41746248156", 1200, 1200),
-  backstage: "/main/S3.jpeg",
-  brandShoot: "/main/S1.jpeg",
-  editors: "/main/S4.jpeg",
-  bts: "/main/S2.jpeg",
-} as const;
-
 export const SERVICES_SECTION = {
   label: "OUR EXPERTISE",
   title: "Integrated Production &",
@@ -99,11 +86,10 @@ export const SERVICES_SECTION = {
 
 export const SERVICES = [
   {
-    index: "01",
     title: "BACKSTAGE",
     description:
       "Complete backstage support to keep the show running smoothly — from team setup to choreography coordination.",
-    image: SERVICE_IMAGES.backstage,
+    image: "/main/S3.jpeg",
     details: "TEAM | COORDINATION | CHOREOGRAPHY",
     includes: [
       "Provide a professional team",
@@ -111,11 +97,10 @@ export const SERVICES = [
     ],
   },
   {
-    index: "02",
     title: "BRAND SHOOT",
     description:
       "End-to-end brand shoot execution — talent, setup, and on-ground creative support for premium results.",
-    image: SERVICE_IMAGES.brandShoot,
+    image: "/main/S1.jpeg",
     details: "MODELS | LOCATION | MAKEUP",
     includes: [
       "Provide models",
@@ -124,11 +109,10 @@ export const SERVICES = [
     ],
   },
   {
-    index: "03",
     title: "PROFESSIONAL EDITORS",
     description:
       "Editing that matches your brand’s pace and polish — from short-form education to full event storytelling.",
-    image: SERVICE_IMAGES.editors,
+    image: "/main/S4.jpeg",
     details: "REELS | SHORTS | EVENT FILMS",
     includes: [
       "Educational reel",
@@ -137,11 +121,10 @@ export const SERVICES = [
     ],
   },
   {
-    index: "04",
     title: "BTS MAN",
     description:
       "Dedicated behind-the-scenes coverage to capture the process and energy on set — perfect for social-first content.",
-    image: SERVICE_IMAGES.bts,
+    image: "/main/S2.jpeg",
     details: "ON-SET | STORY | SOCIAL",
     includes: ["Behind-the-scenes capture & coverage"],
   },
@@ -231,46 +214,46 @@ export const FOOTER = {
   studioLocations: [{ city: "Bikaner", note: "Primary Base" }],
 } as const;
 
-// ── Image Pools (unsplash, kept for legacy / gallery) ──
+// ── Legacy Image Pools ──
 
-export const HERO_BACKGROUND_IMAGE = unsplash("1492691527719-9d1e07e534b4", 2400, 1600);
+export const HERO_BACKGROUND_IMAGE = "/main/S1.jpeg";
 
 export const HERO_PREVIEW_IMAGES = {
-  talent: unsplash("1610296669228-602fa827fc1f", 900, 900),
-  production: unsplash("1583939003579-730e3918a45a", 900, 900),
-  locations: unsplash("1494526585095-c41746248156", 900, 900),
+  talent: "/main/M1.jpeg",
+  production: "/main/S1.jpeg",
+  locations: "/main/S3.jpeg",
 } as const;
 
 export const TALENT_IMAGE_POOL = [
-  unsplash("1610296669228-602fa827fc1f", 1200, 1600),
-  unsplash("1542038784456-1ea8e935640e", 1200, 1600),
-  unsplash("1509631179647-0177331693ae", 1200, 1600),
-  unsplash("1519741497674-611481863552", 1200, 1600),
-  unsplash("1606216794079-73f85bbd57d5", 1200, 1600),
-  unsplash("1511285560929-80b456fea0bc", 1200, 1600),
-  unsplash("1492691527719-9d1e07e534b4", 1200, 1600),
-  unsplash("1583939003579-730e3918a45a", 1200, 1600),
+  "/main/M1.jpeg",
+  "/main/M3.png",
+  "/main/M4.png",
+  "/main/M5.png",
+  "/main/COP.jpeg",
+  "/main/CM.jpeg",
+  "/main/CFD.jpeg",
+  "/main/S1.jpeg",
 ] as const;
 
 export const PORTFOLIO_IMAGE_POOL = [
-  unsplash("1492691527719-9d1e07e534b4", 1400, 1800),
-  unsplash("1511285560929-80b456fea0bc", 1400, 1800),
-  unsplash("1606216794079-73f85bbd57d5", 1400, 1800),
-  unsplash("1583939003579-730e3918a45a", 1400, 1800),
-  unsplash("1519741497674-611481863552", 1400, 1800),
-  unsplash("1509631179647-0177331693ae", 1400, 1800),
-  unsplash("1520854221256-17451cc331bf", 1400, 1800),
-  unsplash("1542038784456-1ea8e935640e", 1400, 1800),
+  "/main/S1.jpeg",
+  "/main/S2.jpeg",
+  "/main/S3.jpeg",
+  "/main/S4.jpeg",
+  "/main/COP.jpeg",
+  "/main/CM.jpeg",
+  "/main/CFD.jpeg",
+  "/main/M1.jpeg",
 ] as const;
 
 export const LOCATION_IMAGE_POOL = [
-  unsplash("1494526585095-c41746248156", 1400, 1800),
-  unsplash("1502672260266-1c1ef2d93688", 1400, 1800),
-  unsplash("1505691938895-1758d7feb511", 1400, 1800),
-  unsplash("1479839672679-a46483c0e7c8", 1400, 1800),
-  unsplash("1464890100898-a385f744067f", 1400, 1800),
-  unsplash("1460317442991-0ec209397118", 1400, 1800),
-  unsplash("1489515217757-5fd1be406fef", 1400, 1800),
-  unsplash("1493809842364-78817add7ffb", 1400, 1800),
-  unsplash("1512918728675-ed5a9ecdebfd", 1400, 1800),
+  "/images/loc1.svg",
+  "/images/loc2.svg",
+  "/images/loc3.svg",
+  "/images/loc4.svg",
+  "/main/S1.jpeg",
+  "/main/S2.jpeg",
+  "/main/S3.jpeg",
+  "/main/S4.jpeg",
+  "/images/hero.svg",
 ] as const;

@@ -5,6 +5,12 @@ import path from "path";
 import { getAdminFromCookies } from "@/app/lib/auth";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
+const imageExtensions: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/jpg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+};
 
 // Ensure upload directory exists
 async function ensureUploadDir() {
@@ -33,9 +39,9 @@ export async function POST(request: Request) {
 
     // Validate file type
     if (type === "image") {
-      if (!file.type.includes("jpeg") && !file.type.includes("jpg")) {
+      if (!imageExtensions[file.type]) {
         return NextResponse.json(
-          { error: "Only JPEG images are allowed" },
+          { error: "Only JPG, PNG, or WEBP images are allowed" },
           { status: 400 }
         );
       }
@@ -54,7 +60,7 @@ export async function POST(request: Request) {
     }
 
     // Generate unique filename
-    const ext = type === "image" ? ".jpeg" : ".mp4";
+    const ext = type === "image" ? imageExtensions[file.type] : ".mp4";
     const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
     const filePath = path.join(UPLOAD_DIR, uniqueName);
 

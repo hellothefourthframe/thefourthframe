@@ -19,9 +19,6 @@ if (!MONGODB_URI) {
   process.exit(1);
 }
 
-const unsplash = (id: string, w: number, h: number) =>
-  `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&h=${h}&q=82`;
-
 async function seed() {
   console.log("🌱 Connecting to MongoDB...");
   const client = await MongoClient.connect(MONGODB_URI);
@@ -102,18 +99,8 @@ async function seed() {
         title: "Integrated Production &",
         titleAccent: "Talent Management",
       },
-      serviceImages: {
-        talent: unsplash("1610296669228-602fa827fc1f", 1200, 1200),
-        production: unsplash("1583939003579-730e3918a45a", 1200, 1200),
-        locations: unsplash("1494526585095-c41746248156", 1200, 1200),
-        backstage: "/main/S3.jpeg",
-        brandShoot: "/main/S1.jpeg",
-        editors: "/main/S4.jpeg",
-        bts: "/main/S2.jpeg",
-      },
       services: [
         {
-          index: "01",
           title: "BACKSTAGE",
           description:
             "Complete backstage support to keep the show running smoothly — from team setup to choreography coordination.",
@@ -125,7 +112,6 @@ async function seed() {
           ],
         },
         {
-          index: "02",
           title: "BRAND SHOOT",
           description:
             "End-to-end brand shoot execution — talent, setup, and on-ground creative support for premium results.",
@@ -138,7 +124,6 @@ async function seed() {
           ],
         },
         {
-          index: "03",
           title: "PROFESSIONAL EDITORS",
           description:
             "Editing that matches your brand's pace and polish — from short-form education to full event storytelling.",
@@ -151,7 +136,6 @@ async function seed() {
           ],
         },
         {
-          index: "04",
           title: "BTS MAN",
           description:
             "Dedicated behind-the-scenes coverage to capture the process and energy on set — perfect for social-first content.",

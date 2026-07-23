@@ -1,4 +1,5 @@
 export const MAX_ADMIN_VIDEO_BYTES = 50 * 1024 * 1024;
+export const MAX_PUBLIC_VIDEO_BYTES = 20 * 1024 * 1024;
 
 export const ALLOWED_VIDEO_MIME_TYPES = [
   "video/mp4",

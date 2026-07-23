@@ -1,19 +1,10 @@
-import { existsSync } from "fs";
-import { mkdir, unlink, writeFile } from "fs/promises";
+import { del } from "@vercel/blob";
 import { ObjectId } from "mongodb";
 import { NextResponse } from "next/server";
-import path from "path";
 import { getAdminFromCookies } from "@/app/lib/auth";
 import { getDb } from "@/app/lib/mongodb";
 
 const MAX_IMAGES = 5;
-const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
-const MAX_VIDEO_SIZE = 20 * 1024 * 1024;
-const PUBLIC_UPLOAD_PATH = "/uploads/model-submissions";
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "model-submissions");
-
-const allowedImageTypes = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
-const allowedVideoTypes = new Set(["video/mp4", "video/quicktime", "video/webm"]);
 
 interface StoredSubmission {
   fullname: string;
@@ -27,44 +18,41 @@ interface StoredSubmission {
   createdAt: Date;
 }
 
-function cleanText(value: FormDataEntryValue | null) {
+interface SubmissionPayload {
+  fullname?: string;
+  email?: string;
+  contact?: string;
+  age?: string;
+  height?: string;
+  city?: string;
+  images?: string[];
+  video?: string | null;
+}
+
+function cleanText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function safeExtension(fileName: string, fallback: string) {
-  const ext = fileName.toLowerCase().match(/\.[a-z0-9]+$/)?.[0];
-  return ext && ext.length <= 6 ? ext : fallback;
+function isBlobUrl(filePath: string) {
+  try {
+    const url = new URL(filePath);
+    return (
+      url.protocol === "https:" &&
+      (url.hostname.endsWith(".blob.vercel-storage.com") ||
+        url.hostname.endsWith(".public.blob.vercel-storage.com") ||
+        url.hostname === "blob.vercel-storage.com")
+    );
+  } catch {
+    return false;
+  }
 }
 
 function isUploadPath(filePath: string) {
-  return filePath.startsWith(`${PUBLIC_UPLOAD_PATH}/`) && !filePath.includes("..");
+  return filePath.startsWith("/uploads/model-submissions/") && !filePath.includes("..");
 }
 
-async function ensureUploadDir() {
-  if (!existsSync(UPLOAD_DIR)) {
-    await mkdir(UPLOAD_DIR, { recursive: true });
-  }
-}
-
-async function saveUpload(file: File, type: "image" | "video") {
-  const fallbackExt = type === "image" ? ".jpg" : ".mp4";
-  const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}${safeExtension(
-    file.name,
-    fallbackExt
-  )}`;
-  const fullPath = path.join(UPLOAD_DIR, uniqueName);
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(fullPath, buffer);
-  return `${PUBLIC_UPLOAD_PATH}/${uniqueName}`;
-}
-
-async function deleteUpload(filePath: string) {
-  if (!isUploadPath(filePath)) return;
-
-  const fullPath = path.join(process.cwd(), "public", ...filePath.split("/").filter(Boolean));
-  if (existsSync(fullPath)) {
-    await unlink(fullPath);
-  }
+function isValidMediaPath(filePath: string) {
+  return isBlobUrl(filePath) || isUploadPath(filePath);
 }
 
 function serializeSubmission(submission: StoredSubmission & { _id: ObjectId }) {
@@ -76,18 +64,18 @@ function serializeSubmission(submission: StoredSubmission & { _id: ObjectId }) {
 }
 
 export async function POST(request: Request) {
-  const savedPaths: string[] = [];
-
   try {
-    const formData = await request.formData();
-    const fullname = cleanText(formData.get("fullname"));
-    const email = cleanText(formData.get("email"));
-    const contact = cleanText(formData.get("contact"));
-    const age = cleanText(formData.get("age"));
-    const height = cleanText(formData.get("height"));
-    const city = cleanText(formData.get("city"));
-    const images = formData.getAll("images").filter((item): item is File => item instanceof File);
-    const video = formData.get("video");
+    const body = (await request.json()) as SubmissionPayload;
+    const fullname = cleanText(body.fullname);
+    const email = cleanText(body.email);
+    const contact = cleanText(body.contact);
+    const age = cleanText(body.age);
+    const height = cleanText(body.height);
+    const city = cleanText(body.city);
+    const images = Array.isArray(body.images)
+      ? body.images.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+      : [];
+    const video = cleanText(body.video);
 
     if (!fullname || !email || !contact || !age || !height || !city) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
@@ -100,56 +88,16 @@ export async function POST(request: Request) {
       );
     }
 
-    for (const image of images) {
-      if (!allowedImageTypes.has(image.type)) {
-        return NextResponse.json(
-          { error: "Only JPG, PNG, or WEBP images are allowed" },
-          { status: 400 }
-        );
-      }
-
-      if (image.size > MAX_IMAGE_SIZE) {
-        return NextResponse.json(
-          { error: "Each image must be 8 MB or smaller" },
-          { status: 400 }
-        );
-      }
+    if (!images.every(isValidMediaPath)) {
+      return NextResponse.json({ error: "Invalid image upload path" }, { status: 400 });
     }
 
-    const videoFile = video instanceof File && video.size > 0 ? video : null;
-    if (!videoFile) {
+    if (!video) {
       return NextResponse.json({ error: "Please upload one short video" }, { status: 400 });
     }
 
-    if (videoFile) {
-      if (!allowedVideoTypes.has(videoFile.type)) {
-        return NextResponse.json(
-          { error: "Only MP4, MOV, or WEBM videos are allowed" },
-          { status: 400 }
-        );
-      }
-
-      if (videoFile.size > MAX_VIDEO_SIZE) {
-        return NextResponse.json(
-          { error: "Video must be 20 MB or smaller" },
-          { status: 400 }
-        );
-      }
-    }
-
-    await ensureUploadDir();
-
-    const imagePaths = [];
-    for (const image of images) {
-      const imagePath = await saveUpload(image, "image");
-      savedPaths.push(imagePath);
-      imagePaths.push(imagePath);
-    }
-
-    let videoPath: string | null = null;
-    if (videoFile) {
-      videoPath = await saveUpload(videoFile, "video");
-      savedPaths.push(videoPath);
+    if (!isValidMediaPath(video)) {
+      return NextResponse.json({ error: "Invalid video upload path" }, { status: 400 });
     }
 
     const db = await getDb();
@@ -160,8 +108,8 @@ export async function POST(request: Request) {
       age,
       height,
       city,
-      images: imagePaths,
-      video: videoPath,
+      images,
+      video,
       createdAt: new Date(),
     };
 
@@ -172,7 +120,6 @@ export async function POST(request: Request) {
       submission: serializeSubmission({ ...doc, _id: result.insertedId }),
     });
   } catch (error) {
-    await Promise.all(savedPaths.map((filePath) => deleteUpload(filePath)));
     console.error("Model submission error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
@@ -200,6 +147,26 @@ export async function GET() {
   } catch (error) {
     console.error("Model submissions fetch error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+async function deleteUpload(filePath: string) {
+  if (isBlobUrl(filePath)) {
+    await del(filePath, {
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+    return;
+  }
+
+  if (!isUploadPath(filePath)) return;
+
+  const { existsSync } = await import("fs");
+  const { unlink } = await import("fs/promises");
+  const path = await import("path");
+
+  const fullPath = path.join(process.cwd(), "public", ...filePath.split("/").filter(Boolean));
+  if (existsSync(fullPath)) {
+    await unlink(fullPath);
   }
 }
 

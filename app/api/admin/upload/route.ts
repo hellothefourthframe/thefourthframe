@@ -1,105 +1,78 @@
 import { NextResponse } from "next/server";
-import { put, del } from "@vercel/blob";
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { del } from "@vercel/blob";
 import { getAdminFromCookies } from "@/app/lib/auth";
 
-const imageExtensions: Record<string, string> = {
-  "image/jpeg": ".jpg",
-  "image/jpg": ".jpg",
-  "image/png": ".png",
-  "image/webp": ".webp",
-};
+const imageContentTypes = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+];
 
-// POST — Upload a file (admin only)
+const videoContentTypes = ["video/mp4"];
+
+// POST — Generate upload token (admin only) + handle upload completion
 export async function POST(request: Request) {
+  const body = (await request.json()) as HandleUploadBody;
+
   try {
-    const admin = await getAdminFromCookies();
+    const jsonResponse = await handleUpload({
+      body,
+      request,
+      onBeforeGenerateToken: async (pathname, clientPayload) => {
+        // Auth check — runs BEFORE any upload token is issued
+        const admin = await getAdminFromCookies();
 
-    if (!admin) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+        if (!admin) {
+          throw new Error("Unauthorized");
+        }
 
-    const formData = await request.formData();
-    const file = formData.get("file") as File | null;
-    const type = formData.get("type") as string | null;
+        let type: string | null = null;
+        try {
+          type = clientPayload ? JSON.parse(clientPayload).type : null;
+        } catch {
+          type = null;
+        }
 
-    if (!file) {
-      return NextResponse.json(
-        { error: "No file provided" },
-        { status: 400 }
-      );
-    }
+        if (type !== "image" && type !== "video") {
+          throw new Error("Invalid file type. Must be 'image' or 'video'");
+        }
 
-    // Validate file type
-    if (type === "image") {
-      if (!imageExtensions[file.type]) {
-        return NextResponse.json(
-          { error: "Only JPG, PNG or WEBP images are allowed" },
-          { status: 400 }
-        );
-      }
-    } else if (type === "video") {
-      if (file.type !== "video/mp4") {
-        return NextResponse.json(
-          { error: "Only MP4 videos are allowed" },
-          { status: 400 }
-        );
-      }
-    } else {
-      return NextResponse.json(
-        { error: "Invalid file type. Must be 'image' or 'video'" },
-        { status: 400 }
-      );
-    }
-
-    const ext =
-      type === "image"
-        ? imageExtensions[file.type]
-        : ".mp4";
-
-    const filename = `${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2, 8)}${ext}`;
-
-    const blob = await put(filename, file, {
-      access: "public",
-      addRandomSuffix: false,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+        return {
+          allowedContentTypes:
+            type === "image" ? imageContentTypes : videoContentTypes,
+          addRandomSuffix: true,
+          tokenPayload: JSON.stringify({ type }),
+        };
+      },
+      onUploadCompleted: async ({ blob, tokenPayload }) => {
+        // Optional: log or persist to DB after upload finishes
+        console.log("Upload completed:", blob.url, tokenPayload);
+      },
     });
 
-    return NextResponse.json({
-      success: true,
-      path: blob.url,
-      pathname: blob.pathname,
-    });
+    return NextResponse.json(jsonResponse);
   } catch (err) {
     console.error("Upload error:", err);
 
     return NextResponse.json(
       {
         success: false,
-        error:
-          err instanceof Error
-            ? err.message
-            : "Upload failed",
+        error: err instanceof Error ? err.message : "Upload failed",
       },
-      { status: 500 }
+      { status: 400 }
     );
   }
 }
 
-// DELETE — Remove uploaded file
+// DELETE — Remove uploaded file (admin only) — unchanged
 export async function DELETE(request: Request) {
   try {
     const admin = await getAdminFromCookies();
 
     if (!admin) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { filePath } = await request.json();
@@ -115,19 +88,14 @@ export async function DELETE(request: Request) {
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
 
-    return NextResponse.json({
-      success: true,
-    });
+    return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Delete error:", err);
 
     return NextResponse.json(
       {
         success: false,
-        error:
-          err instanceof Error
-            ? err.message
-            : "Delete failed",
+        error: err instanceof Error ? err.message : "Delete failed",
       },
       { status: 500 }
     );

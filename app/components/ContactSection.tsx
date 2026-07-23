@@ -3,6 +3,7 @@
 import { type FormEvent, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Image from "next/image";
+import { uploadFile } from "@/app/lib/upload";
 import type { SiteData, SocialLink, ContactSectionData } from "../lib/types";
 
 interface ContactSectionProps {
@@ -49,9 +50,27 @@ export default function ContactSection({
     setSubmitting(true);
 
     try {
+      const imagePaths: string[] = [];
+      for (const image of images) {
+        const uploaded = await uploadFile(image as File, "image", "/api/upload");
+        imagePaths.push(uploaded.path);
+      }
+
+      const uploadedVideo = await uploadFile(video, "video", "/api/upload");
+
       const response = await fetch("/api/model-submissions", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullname: formData.get("fullname"),
+          email: formData.get("email"),
+          contact: formData.get("contact"),
+          age: formData.get("age"),
+          height: formData.get("height"),
+          city: formData.get("city"),
+          images: imagePaths,
+          video: uploadedVideo.path,
+        }),
       });
       const data = await response.json();
 

@@ -3,13 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { ModelSubmission, SiteContent } from "@/app/lib/types";
-
-type UploadResponse = {
-  success?: boolean;
-  path?: string;
-  pathname?: string;
-  error?: string;
-};
+import { uploadFile as blobUpload } from "@/app/lib/upload";
 
 function isManagedUploadPath(filePath: string) {
   if (filePath.startsWith("/uploads/")) {
@@ -86,25 +80,11 @@ export default function AdminDashboard() {
   };
 
   const uploadFile = async (file: File, type: "image" | "video"): Promise<string | null> => {
-    const form = new FormData();
-    form.append("file", file);
-    form.append("type", type);
     try {
-      const res = await fetch("/api/admin/upload", { method: "POST", body: form });
-      const data = (await res.json()) as UploadResponse;
-      if (!res.ok) {
-        showToast(data.error || "Upload failed", "err");
-        return null;
-      }
-
-      if (data.success === false || !data.path) {
-        showToast(data.error || "Upload failed", "err");
-        return null;
-      }
-
-      return data.path;
-    } catch {
-      showToast("Upload failed", "err");
+      const result = await blobUpload(file, type, "/api/admin/upload");
+      return result.path;
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Upload failed", "err");
       return null;
     }
   };

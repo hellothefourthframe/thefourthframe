@@ -22,6 +22,18 @@ export default function ContactSection({
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setSelectedImages(files);
+  };
+
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setSelectedVideo(file);
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -85,6 +97,8 @@ export default function ContactSection({
       }
 
       form.reset();
+      setSelectedImages([]);
+      setSelectedVideo(null);
       setShowSuccessModal(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Submission failed");
@@ -177,15 +191,73 @@ export default function ContactSection({
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   multiple
+                  onChange={handleImageChange}
                   required
                 />
                 <span className="form-hint">Upload 1 to 5 clear photos.</span>
+
+                {selectedImages.length > 0 && (
+                  <div style={{ marginTop: "0.6rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--accent-gold, #c5a059)" }}>
+                      Selected ({selectedImages.length} / 5 max):
+                    </span>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                      {selectedImages.map((file, idx) => (
+                        <span
+                          key={`${file.name}-${idx}`}
+                          style={{
+                            fontSize: "0.72rem",
+                            padding: "0.25rem 0.6rem",
+                            background: "rgba(10,10,10,0.06)",
+                            border: "1px solid rgba(10,10,10,0.12)",
+                            borderRadius: "6px",
+                            color: "#1a1a1a",
+                            wordBreak: "break-all",
+                          }}
+                        >
+                          📷 {file.name} ({(file.size / (1024 * 1024)).toFixed(1)} MB)
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="input-group">
                 <label htmlFor="model-video">SHORT VIDEO</label>
-                <input id="model-video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/ogg,.mp4,.webm,.mov,.avi,.ogv" required />
+                <input
+                  id="model-video"
+                  name="video"
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/ogg,.mp4,.webm,.mov,.avi,.ogv"
+                  onChange={handleVideoChange}
+                  required
+                />
                 <span className="form-hint">Upload one short video (MP4, WEBM, MOV, AVI, or OGG), max 20 MB.</span>
+
+                {selectedVideo && (
+                  <div style={{ marginTop: "0.6rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--accent-gold, #c5a059)" }}>
+                      Selected Video:
+                    </span>
+                    <div>
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          padding: "0.25rem 0.6rem",
+                          background: "rgba(10,10,10,0.06)",
+                          border: "1px solid rgba(10,10,10,0.12)",
+                          borderRadius: "6px",
+                          color: "#1a1a1a",
+                          display: "inline-block",
+                          wordBreak: "break-all",
+                        }}
+                      >
+                        🎥 {selectedVideo.name} ({(selectedVideo.size / (1024 * 1024)).toFixed(1)} MB)
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {error ? <div className="contact-status contact-status-error">{error}</div> : null}

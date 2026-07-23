@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { ALLOWED_VIDEO_MIME_TYPES } from "@/app/lib/video";
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 20 * 1024 * 1024;
@@ -11,7 +12,7 @@ const imageContentTypes = [
   "image/webp",
 ];
 
-const videoContentTypes = ["video/mp4", "video/quicktime", "video/webm"];
+const videoContentTypes = [...ALLOWED_VIDEO_MIME_TYPES];
 
 function parseUploadType(
   clientPayload: string | null | undefined

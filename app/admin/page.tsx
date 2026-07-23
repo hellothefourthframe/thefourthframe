@@ -4,6 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { ModelSubmission, SiteContent } from "@/app/lib/types";
 import { uploadFile as blobUpload } from "@/app/lib/upload";
+import {
+  formatMaxVideoSize,
+  isAllowedVideoType,
+  MAX_ADMIN_VIDEO_BYTES,
+  VIDEO_FILE_ACCEPT,
+} from "@/app/lib/video";
 
 function isManagedUploadPath(filePath: string) {
   if (filePath.startsWith("/uploads/")) {
@@ -80,6 +86,18 @@ export default function AdminDashboard() {
   };
 
   const uploadFile = async (file: File, type: "image" | "video"): Promise<string | null> => {
+    if (type === "video") {
+      if (!isAllowedVideoType(file.type)) {
+        showToast("Only MP4, WEBM, MOV, AVI, or OGG videos are allowed", "err");
+        return null;
+      }
+
+      if (file.size > MAX_ADMIN_VIDEO_BYTES) {
+        showToast(`Video must be ${formatMaxVideoSize(MAX_ADMIN_VIDEO_BYTES)} or smaller`, "err");
+        return null;
+      }
+    }
+
     try {
       const result = await blobUpload(file, type, "/api/admin/upload");
       return result.path;
@@ -330,7 +348,9 @@ function HeroSection({ content, onSave, onUpload, onDelete }: SectionProps) {
 
   return (
     <div style={S.sectionWrap}>
-      <p style={S.hint}>Upload MP4 videos only. Limit: 1 video per slot.</p>
+      <p style={S.hint}>
+        Upload MP4, WEBM, MOV, AVI, or OGG videos (max {formatMaxVideoSize(MAX_ADMIN_VIDEO_BYTES)}). Limit: 1 video per slot.
+      </p>
 
       {(["desktopVideo", "mobileVideo"] as const).map((field) => (
         <div key={field} style={S.card}>
@@ -347,8 +367,8 @@ function HeroSection({ content, onSave, onUpload, onDelete }: SectionProps) {
             <p style={S.noMedia}>No video set</p>
           )}
           <label style={S.uploadLabel}>
-            {uploading === field ? "Uploading..." : "Upload MP4"}
-            <input type="file" accept="video/mp4" onChange={(e) => handleVideoUpload(e, field)} style={S.fileInput} disabled={!!uploading} />
+            {uploading === field ? "Uploading..." : "Upload Video"}
+            <input type="file" accept={VIDEO_FILE_ACCEPT} onChange={(e) => handleVideoUpload(e, field)} style={S.fileInput} disabled={!!uploading} />
           </label>
         </div>
       ))}
@@ -789,7 +809,9 @@ function FooterSection({ content, onSave, onUpload, onDelete }: SectionProps) {
     <div style={S.sectionWrap}>
       <div style={S.card}>
         <h3 style={S.cardTitle}>CTA Video</h3>
-        <p style={S.hint}>Upload MP4 video. Save Footer after upload to show it on the website.</p>
+        <p style={S.hint}>
+          Upload MP4, WEBM, MOV, AVI, or OGG video (max {formatMaxVideoSize(MAX_ADMIN_VIDEO_BYTES)}). Save Footer after upload to show it on the website.
+        </p>
         {footer.ctaVideoSrc ? (
           <div style={S.mediaPreview}>
             <video src={footer.ctaVideoSrc} style={S.previewVideo} controls muted />
@@ -802,8 +824,8 @@ function FooterSection({ content, onSave, onUpload, onDelete }: SectionProps) {
           <p style={S.noMedia}>No CTA video set</p>
         )}
         <label style={S.uploadLabel}>
-          {uploading ? "Uploading..." : "Upload MP4"}
-          <input type="file" accept="video/mp4" onChange={handleCtaVideoUpload} style={S.fileInput} disabled={uploading} />
+          {uploading ? "Uploading..." : "Upload Video"}
+          <input type="file" accept={VIDEO_FILE_ACCEPT} onChange={handleCtaVideoUpload} style={S.fileInput} disabled={uploading} />
         </label>
       </div>
       <FieldTextarea label="CTA Headline" value={footer.ctaHeadline} onChange={(v) => setFooter({ ...footer, ctaHeadline: v })} />

@@ -84,7 +84,8 @@ export default function Footer({ site, socialLinks, footer }: FooterProps) {
               loop
               muted
               playsInline
-              preload="metadata"
+              preload="auto"
+              src={footer.ctaVideoSrc}
               style={{
                 position: "absolute",
                 inset: 0,
@@ -94,9 +95,7 @@ export default function Footer({ site, socialLinks, footer }: FooterProps) {
                 objectPosition: "center",
                 zIndex: 0,
               }}
-            >
-              <source key={footer.ctaVideoSrc} src={footer.ctaVideoSrc} type="video/mp4" />
-            </video>
+            />
           ) : (
             <div
               aria-hidden="true"

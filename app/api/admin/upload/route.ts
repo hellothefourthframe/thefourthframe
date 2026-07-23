@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { del } from "@vercel/blob";
 import { getAdminFromCookies } from "@/app/lib/auth";
+import {
+  ALLOWED_VIDEO_MIME_TYPES,
+  MAX_ADMIN_VIDEO_BYTES,
+} from "@/app/lib/video";
 
 const imageContentTypes = [
   "image/jpeg",
@@ -10,7 +14,7 @@ const imageContentTypes = [
   "image/webp",
 ];
 
-const videoContentTypes = ["video/mp4"];
+const videoContentTypes = [...ALLOWED_VIDEO_MIME_TYPES];
 
 // POST — Generate upload token (admin only) + handle upload completion
 export async function POST(request: Request) {
@@ -42,8 +46,11 @@ export async function POST(request: Request) {
         return {
           allowedContentTypes:
             type === "image" ? imageContentTypes : videoContentTypes,
+          maximumSizeInBytes:
+            type === "video" ? MAX_ADMIN_VIDEO_BYTES : 10 * 1024 * 1024,
           addRandomSuffix: true,
           tokenPayload: JSON.stringify({ type }),
+          validUntil: Date.now() + 60 * 60 * 1000,
         };
       },
       onUploadCompleted: async ({ blob, tokenPayload }) => {

@@ -4,6 +4,7 @@ import { type FormEvent, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Image from "next/image";
 import { uploadFile } from "@/app/lib/upload";
+import { isAllowedVideoType } from "@/app/lib/video";
 import type { SiteData, SocialLink, ContactSectionData } from "../lib/types";
 
 interface ContactSectionProps {
@@ -39,6 +40,11 @@ export default function ContactSection({
 
     if (!(video instanceof File) || video.size === 0) {
       setError("Please upload one short video.");
+      return;
+    }
+
+    if (!isAllowedVideoType(video.type)) {
+      setError("Only MP4, WEBM, MOV, AVI, or OGG videos are allowed.");
       return;
     }
 
@@ -178,8 +184,8 @@ export default function ContactSection({
 
               <div className="input-group">
                 <label htmlFor="model-video">SHORT VIDEO</label>
-                <input id="model-video" name="video" type="file" accept="video/mp4,video/quicktime,video/webm" required />
-                <span className="form-hint">Upload one short video, max 20 MB.</span>
+                <input id="model-video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/ogg,.mp4,.webm,.mov,.avi,.ogv" required />
+                <span className="form-hint">Upload one short video (MP4, WEBM, MOV, AVI, or OGG), max 20 MB.</span>
               </div>
 
               {error ? <div className="contact-status contact-status-error">{error}</div> : null}

@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@vercel/blob": "^2.6.1",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.2",

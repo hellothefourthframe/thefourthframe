@@ -46,7 +46,7 @@ export default function Founders({ foundersSection, founders }: FoundersProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12" style={{ perspective: "1200px" }}>
           {founders.map((founder, i) => (
             <motion.div
-              key={founder.role + i}
+              key={`${founder.role}-${founder.image}-${i}`}
               className="group relative h-[520px] w-full overflow-hidden cursor-pointer"
               style={{ borderRadius: "var(--radius-xl)", transformStyle: "preserve-3d" }}
               initial={{ opacity: 0, y: 40, rotateX: 15 }}
@@ -61,6 +61,7 @@ export default function Founders({ foundersSection, founders }: FoundersProps) {
             >
               <div className="absolute inset-0 z-0">
                 <Image
+                  key={founder.image}
                   src={founder.image}
                   alt={founder.name}
                   fill

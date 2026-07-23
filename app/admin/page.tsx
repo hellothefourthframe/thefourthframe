@@ -18,7 +18,12 @@ function isManagedUploadPath(filePath: string) {
 
   try {
     const url = new URL(filePath);
-    return url.protocol === "https:" && url.hostname.endsWith(".public.blob.vercel-storage.com");
+    return (
+      url.protocol === "https:" &&
+      (url.hostname.endsWith(".blob.vercel-storage.com") ||
+        url.hostname.endsWith(".public.blob.vercel-storage.com") ||
+        url.hostname === "blob.vercel-storage.com")
+    );
   } catch {
     return false;
   }

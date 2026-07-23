@@ -1,4 +1,7 @@
+
+
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getDb } from "@/app/lib/mongodb";
 import { getAdminFromCookies } from "@/app/lib/auth";
 
@@ -12,7 +15,11 @@ export async function GET() {
       return NextResponse.json({ error: "No content found" }, { status: 404 });
     }
 
-    const { _id, createdAt, updatedAt, ...data } = content;
+    const data = { ...content };
+
+    delete data.createdAt;
+    delete data.updatedAt;
+
     return NextResponse.json(data);
   } catch (error) {
     console.error("Content fetch error:", error);
@@ -51,6 +58,15 @@ export async function PUT(request: Request) {
     if (result.matchedCount === 0) {
       return NextResponse.json({ error: "No content document found" }, { status: 404 });
     }
+
+    revalidatePath("/", "layout");
+    revalidatePath("/", "page");
+    revalidatePath("/(main)", "layout");
+    revalidatePath("/(main)", "page");
+    revalidatePath("/services", "page");
+    revalidatePath("/gallery", "page");
+    revalidatePath("/plans", "page");
+    revalidatePath("/contact", "page");
 
     return NextResponse.json({ success: true });
   } catch (error) {

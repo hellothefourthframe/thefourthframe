@@ -62,6 +62,7 @@ export default function Services({ servicesSection, services }: ServicesProps) {
                   <div className="service-face service-front">
                     <div className="service-media">
                       <Image
+                        key={s.image}
                         src={s.image}
                         alt={s.title}
                         fill

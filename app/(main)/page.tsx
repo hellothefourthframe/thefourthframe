@@ -5,6 +5,9 @@ import PortfolioExplorer from "../components/PortfolioExplorer";
 import ContactSection from "../components/ContactSection";
 import { getSiteContent } from "../lib/data";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function Home() {
   const content = await getSiteContent();
 

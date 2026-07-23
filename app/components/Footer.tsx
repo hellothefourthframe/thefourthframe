@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { scrollToHash } from "../lib/scrollToHash";
-import { NAV_ITEMS, NAV_CTA } from "../lib/constants";
+import { NAV_ITEMS } from "../lib/constants";
 import type { SiteData, SocialLink, FooterData } from "../lib/types";
 
 interface FooterProps {
@@ -95,7 +95,7 @@ export default function Footer({ site, socialLinks, footer }: FooterProps) {
                 zIndex: 0,
               }}
             >
-              <source src={footer.ctaVideoSrc} type="video/mp4" />
+              <source key={footer.ctaVideoSrc} src={footer.ctaVideoSrc} type="video/mp4" />
             </video>
           ) : (
             <div

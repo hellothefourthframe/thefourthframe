@@ -48,7 +48,7 @@ export default function PortfolioExplorer({ modelsSection, models }: PortfolioEx
         <div className="models-grid">
           {models.map((model, i) => (
             <motion.div
-              key={model.id}
+              key={`${model.id}-${model.image}-${i}`}
               className="group"
               style={{
                 position: "relative",
@@ -68,6 +68,7 @@ export default function PortfolioExplorer({ modelsSection, models }: PortfolioEx
             >
               <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
                 <Image
+                  key={model.image}
                   src={model.image}
                   alt={model.name}
                   fill

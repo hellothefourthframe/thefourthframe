@@ -3,9 +3,10 @@
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
-import { startTransition, useDeferredValue, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useState } from "react";
+import type { SiteContent } from "@/app/lib/types";
 
-const galleryItems = [
+const defaultGalleryItems = [
   {
     src: "/main/S1.jpeg",
     title: "Editorial Bridal",
@@ -68,7 +69,51 @@ const categories = ["All", "Photography", "Film", "Fashion", "BTS"];
 
 export default function GalleryPage() {
   const [activeTab, setActiveTab] = useState("All");
+  const [galleryItems, setGalleryItems] = useState(defaultGalleryItems);
   const deferredTab = useDeferredValue(activeTab);
+
+  useEffect(() => {
+    fetch("/api/admin/content")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: SiteContent | null) => {
+        if (!data) return;
+
+        const dynamicItems = [...defaultGalleryItems];
+
+        // Override default service images with updated ones from admin database
+        if (data.services && data.services.length > 0) {
+          data.services.forEach((s, idx) => {
+            if (s.image && dynamicItems[idx]) {
+              dynamicItems[idx] = {
+                ...dynamicItems[idx],
+                title: s.title || dynamicItems[idx].title,
+                src: s.image,
+                description: s.description || dynamicItems[idx].description,
+              };
+            }
+          });
+        }
+
+        // Override model images if available
+        if (data.models && data.models.length > 0) {
+          data.models.forEach((m, idx) => {
+            const targetIdx = 2 + idx; // map to fashion/portrait slots
+            if (m.image && dynamicItems[targetIdx]) {
+              dynamicItems[targetIdx] = {
+                ...dynamicItems[targetIdx],
+                title: m.name ? `${m.name} Showcase` : dynamicItems[targetIdx].title,
+                src: m.image,
+              };
+            }
+          });
+        }
+
+        setGalleryItems(dynamicItems);
+      })
+      .catch(() => {
+        /* fallback to defaults */
+      });
+  }, []);
 
   const filteredItems =
     deferredTab === "All"
@@ -147,7 +192,7 @@ export default function GalleryPage() {
             <AnimatePresence mode="popLayout">
               {filteredItems.map((item, index) => (
                 <motion.article
-                  key={item.title}
+                  key={`${item.title}-${item.src}`}
                   layout
                   className={`gallery-card gallery-card-${item.size}`}
                   initial={{ opacity: 0, y: 24 }}
@@ -163,6 +208,7 @@ export default function GalleryPage() {
                 >
                   <div className="gallery-media">
                     <Image
+                      key={item.src}
                       src={item.src}
                       alt={item.title}
                       fill

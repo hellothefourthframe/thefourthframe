@@ -4,7 +4,11 @@ import { motion, useInView } from "motion/react";
 import Image from "next/image";
 import { useRef } from "react";
 
-export default function About() {
+interface AboutProps {
+  image?: string;
+}
+
+export default function About({ image = "/main/CFD.jpeg" }: AboutProps) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
@@ -37,7 +41,8 @@ export default function About() {
             transition={{ duration: 1 }}
           >
             <Image
-              src="/main/CFD.jpeg"
+              key={image}
+              src={image}
               alt="Studio portrait setup"
               fill
               className="about-image"

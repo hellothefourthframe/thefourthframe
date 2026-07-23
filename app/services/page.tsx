@@ -6,8 +6,10 @@ import { getSiteContent } from "../lib/data";
 
 export const metadata: Metadata = {
   title: "Services | The Fourth Frame",
-  description: "Professional photography, videography, social media management, brand strategy, and creative direction services by The Fourth Frame.",
 };
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function ServicesPage() {
   const content = await getSiteContent();

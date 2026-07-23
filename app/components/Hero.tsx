@@ -9,6 +9,7 @@ export default function Hero({ heroMedia }: HeroProps) {
     <section className="hero-fullscreen">
       <div className="hero-video-container" aria-hidden="true">
         <video
+          key={`${heroMedia.desktopVideo}-${heroMedia.mobileVideo}`}
           autoPlay
           loop
           muted
@@ -17,11 +18,16 @@ export default function Hero({ heroMedia }: HeroProps) {
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
         >
           <source
+            key={heroMedia.mobileVideo}
             media="(max-width: 767px)"
             src={heroMedia.mobileVideo}
             type="video/mp4"
           />
-          <source src={heroMedia.desktopVideo} type="video/mp4" />
+          <source
+            key={heroMedia.desktopVideo}
+            src={heroMedia.desktopVideo}
+            type="video/mp4"
+          />
         </video>
       </div>
 

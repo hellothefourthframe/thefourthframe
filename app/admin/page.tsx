@@ -487,6 +487,9 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
       {
         title: "",
         video: "",
+        description: "",
+        details: "",
+        includes: [],
       },
     ]);
   };
@@ -495,6 +498,9 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
     const normalizedServices = services.map((service) => ({
       title: service.title,
       video: service.video || service.image || "",
+      description: service.description || "",
+      details: service.details || "",
+      includes: Array.isArray(service.includes) ? service.includes : [],
     }));
 
     onSave({ servicesSection: section, services: normalizedServices });
@@ -510,9 +516,10 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
       </div>
 
       <h3 style={S.subTitle}>Services</h3>
-      <p style={S.hint}>Upload an MP4 video and enter a Service Name for each card.</p>
+      <p style={S.hint}>Manage Video (MP4), Service Name, Description, Details, and Includes bullet points for each service card.</p>
       {services.map((service, i) => {
         const videoSrc = service.video || service.image;
+        const includesList = Array.isArray(service.includes) ? service.includes : [];
         return (
           <div key={i} style={S.card}>
             <div style={S.cardHeader}>
@@ -527,6 +534,9 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
               </div>
               <button style={S.removeBtn} onClick={() => setServices(services.filter((_, j) => j !== i))}>Remove</button>
             </div>
+
+            <FieldTextarea label="Description" value={service.description || ""} onChange={(v) => updateService(i, "description", v)} />
+            <Field label="Details (e.g. TEAM | COORDINATION)" value={service.details || ""} onChange={(v) => updateService(i, "details", v)} />
 
             {videoSrc ? (
               <div style={S.mediaPreview}>
@@ -549,6 +559,36 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
                 disabled={uploading !== null}
               />
             </label>
+
+            <div style={{ marginTop: "1.2rem" }}>
+              <h5 style={{ ...S.subTitle, fontSize: "0.75rem", marginBottom: "0.5rem" }}>Includes (Bullet Points)</h5>
+              {includesList.map((item, j) => (
+                <div key={j} style={{ ...S.row, marginBottom: "0.5rem" }}>
+                  <input
+                    style={S.inputFlex}
+                    value={item}
+                    placeholder="Bullet point text"
+                    onChange={(e) => {
+                      const updatedIncludes = [...includesList];
+                      updatedIncludes[j] = e.target.value;
+                      updateService(i, "includes", updatedIncludes);
+                    }}
+                  />
+                  <button
+                    style={S.removeBtn}
+                    onClick={() => {
+                      const updatedIncludes = includesList.filter((_, k) => k !== j);
+                      updateService(i, "includes", updatedIncludes);
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <button style={S.addBtnSmall} onClick={() => updateService(i, "includes", [...includesList, ""])}>
+                + Add Bullet Point
+              </button>
+            </div>
           </div>
         );
       })}

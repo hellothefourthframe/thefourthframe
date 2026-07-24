@@ -119,31 +119,35 @@ export default function PortfolioExplorer({ modelsSection, models }: PortfolioEx
                   zIndex: 10,
                 }}
               >
-                <h4
-                  style={{
-                    fontFamily: "var(--font-heading)",
-                    fontSize: "1.6rem",
-                    fontWeight: 500,
-                    color: "#fff",
-                    marginBottom: "1rem",
-                    textShadow: "0 2px 8px rgba(0,0,0,0.4)",
-                    letterSpacing: "-0.02em",
-                  }}
-                >
-                  {model.name}
-                </h4>
+                {model.name && model.name.trim() ? (
+                  <h4
+                    style={{
+                      fontFamily: "var(--font-heading)",
+                      fontSize: "1.6rem",
+                      fontWeight: 500,
+                      color: "#fff",
+                      marginBottom: "1rem",
+                      textShadow: "0 2px 8px rgba(0,0,0,0.4)",
+                      letterSpacing: "-0.02em",
+                    }}
+                  >
+                    {model.name}
+                  </h4>
+                ) : null}
 
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "0.6rem 1.2rem",
-                  }}
-                >
-                  <DetailItem label="HEIGHT" value={model.height} />
-                  <DetailItem label="HAIR" value={model.hair} />
-                  <DetailItem label="EYES" value={model.eyes} />
-                </div>
+                {(model.height?.trim() || model.hair?.trim() || model.eyes?.trim()) ? (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "0.6rem 1.2rem",
+                    }}
+                  >
+                    <DetailItem label="HEIGHT" value={model.height} />
+                    <DetailItem label="HAIR" value={model.hair} />
+                    <DetailItem label="EYES" value={model.eyes} />
+                  </div>
+                ) : null}
               </div>
             </div>
           ))}
@@ -153,7 +157,8 @@ export default function PortfolioExplorer({ modelsSection, models }: PortfolioEx
   );
 }
 
-function DetailItem({ label, value }: { label: string; value: string }) {
+function DetailItem({ label, value }: { label: string; value?: string }) {
+  if (!value || !value.trim()) return null;
   return (
     <div>
       <span

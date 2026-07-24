@@ -13,11 +13,7 @@ export async function GET() {
       return NextResponse.json({ error: "No content found" }, { status: 404 });
     }
 
-    const data = { ...content };
-
-    delete data._id;
-    delete data.createdAt;
-    delete data.updatedAt;
+    const { _id, createdAt, updatedAt, ...data } = content as Record<string, unknown>;
 
     return NextResponse.json(data);
   } catch (error) {
@@ -37,22 +33,22 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const updates = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
 
     // Prevent overwriting _id or timestamps via the API
-    delete updates._id;
-    delete updates.createdAt;
+    const { _id, createdAt, ...updates } = body;
 
     const db = await getDb();
     const latest = await db.collection("siteContent").findOne({}, { sort: { _id: -1 } });
 
     if (!latest) {
       // If collection is empty, insert the document
-      await db.collection("siteContent").insertOne({
-        ...updates,
+      const docToInsert = {
+        ...(updates as Record<string, unknown>),
         createdAt: new Date(),
         updatedAt: new Date(),
-      });
+      };
+      await db.collection("siteContent").insertOne(docToInsert);
     } else {
       // Update the latest document by _id
       await db.collection("siteContent").updateOne(

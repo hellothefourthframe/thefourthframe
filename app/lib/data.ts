@@ -45,20 +45,21 @@ export async function getSiteContent(): Promise<SiteContent> {
     if (!doc) {
       // Auto-create document in MongoDB if empty
       try {
-        await db.collection("siteContent").insertOne({
-          ...DEFAULT_SITE_CONTENT,
+        const { _id, ...initialContent } = DEFAULT_SITE_CONTENT;
+        const docToInsert = {
+          ...(initialContent as Record<string, unknown>),
           createdAt: new Date(),
           updatedAt: new Date(),
-        });
-      } catch { /* ignore write errors */ }
+        };
+        await db.collection("siteContent").insertOne(docToInsert);
+      } catch {
+        /* ignore write errors */
+      }
 
       return DEFAULT_SITE_CONTENT;
     }
 
-    const content = { ...(doc as Record<string, unknown>) };
-    delete content._id;
-    delete content.createdAt;
-    delete content.updatedAt;
+    const { _id, createdAt, updatedAt, ...content } = doc as Record<string, unknown>;
 
     return content as unknown as SiteContent;
   } catch (error) {

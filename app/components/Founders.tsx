@@ -44,7 +44,7 @@ export default function Founders({ foundersSection, founders }: FoundersProps) {
         </div>
       </div>
 
-      {/* Continuous Smooth Auto-scrolling Carousel */}
+      {/* Continuous Seamless Full-Bleed Slider (No Gap, No Rounded Corners) */}
       <div
         style={{
           width: "100%",
@@ -56,7 +56,7 @@ export default function Founders({ foundersSection, founders }: FoundersProps) {
         <motion.div
           style={{
             display: "flex",
-            gap: "2.5rem",
+            gap: "0px",
             width: "max-content",
           }}
           animate={{ x: ["0%", "-33.333%"] }}
@@ -72,14 +72,12 @@ export default function Founders({ foundersSection, founders }: FoundersProps) {
               className="group"
               style={{
                 position: "relative",
-                height: "520px",
+                height: "540px",
                 width: "380px",
                 flexShrink: 0,
                 overflow: "hidden",
-                borderRadius: "30px",
+                borderRadius: "0px",
                 cursor: "pointer",
-                boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-                transition: "transform 0.4s ease, box-shadow 0.4s ease",
               }}
             >
               <div className="absolute inset-0 z-0">
@@ -91,15 +89,15 @@ export default function Founders({ foundersSection, founders }: FoundersProps) {
                   className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                   sizes="380px"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/20 to-transparent opacity-60 group-hover:opacity-85 transition-opacity duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/20 to-transparent opacity-65 group-hover:opacity-85 transition-opacity duration-500" />
               </div>
 
               <div
                 className="absolute bottom-0 left-0 w-full z-10"
                 style={{
-                  padding: "7rem 2.5rem 3rem 2.5rem",
+                  padding: "7rem 2rem 2.5rem 2rem",
                   background: "linear-gradient(to top, rgba(10,10,10,0.92) 0%, rgba(10,10,10,0.6) 50%, transparent 100%)",
-                  borderRadius: "0 0 30px 30px",
+                  borderRadius: "0px",
                 }}
               >
                 <span

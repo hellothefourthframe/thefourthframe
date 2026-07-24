@@ -5,13 +5,6 @@ import { motion, useInView } from "motion/react";
 import { useRef } from "react";
 import type { SectionHeader, Model } from "../lib/types";
 
-const cardReveal = {
-  type: "spring",
-  stiffness: 170,
-  damping: 22,
-  mass: 0.8,
-} as const;
-
 interface PortfolioExplorerProps {
   modelsSection: SectionHeader;
   models: Model[];
@@ -21,8 +14,15 @@ export default function PortfolioExplorer({ modelsSection, models }: PortfolioEx
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
+  const speedDuration = modelsSection.sliderSpeed && modelsSection.sliderSpeed > 0
+    ? modelsSection.sliderSpeed
+    : 25;
+
+  // Duplicate items for continuous seamless loop
+  const displayModels = [...models, ...models, ...models];
+
   return (
-    <section className="section bg-white anchor-section" id="work" ref={ref}>
+    <section className="section bg-white anchor-section overflow-hidden" id="work" ref={ref}>
       <div className="page-container">
         <div className="section-center mb-16">
           <motion.span
@@ -36,7 +36,7 @@ export default function PortfolioExplorer({ modelsSection, models }: PortfolioEx
             className="section-title"
             initial={{ opacity: 0, y: 15 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ ...cardReveal, delay: 0.1 }}
+            transition={{ type: "spring", stiffness: 170, damping: 22, delay: 0.1 }}
           >
             {modelsSection.title}{" "}
             <span className="accent-text" style={{ fontStyle: "italic" }}>
@@ -44,26 +44,44 @@ export default function PortfolioExplorer({ modelsSection, models }: PortfolioEx
             </span>
           </motion.h2>
         </div>
+      </div>
 
-        <div className="models-grid">
-          {models.map((model, i) => (
-            <motion.div
+      {/* Continuous Smooth Auto-scrolling Carousel */}
+      <div
+        style={{
+          width: "100%",
+          overflow: "hidden",
+          position: "relative",
+          padding: "1rem 0 2rem 0",
+        }}
+      >
+        <motion.div
+          style={{
+            display: "flex",
+            gap: "2rem",
+            width: "max-content",
+          }}
+          animate={{ x: ["0%", "-33.333%"] }}
+          transition={{
+            ease: "linear",
+            duration: speedDuration,
+            repeat: Infinity,
+          }}
+        >
+          {displayModels.map((model, i) => (
+            <div
               key={`${model.id}-${model.image}-${i}`}
               className="group"
               style={{
                 position: "relative",
                 height: "520px",
-                width: "100%",
+                width: "360px",
+                flexShrink: 0,
                 overflow: "hidden",
                 borderRadius: "30px",
                 cursor: "pointer",
-              }}
-              initial={{ opacity: 0, y: 40 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ ...cardReveal, delay: 0.12 + i * 0.08 }}
-              whileHover={{
-                y: -14,
-                boxShadow: "0 28px 60px rgba(0,0,0,0.18)",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                transition: "transform 0.4s ease, box-shadow 0.4s ease",
               }}
             >
               <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
@@ -74,7 +92,7 @@ export default function PortfolioExplorer({ modelsSection, models }: PortfolioEx
                   fill
                   quality={90}
                   className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  sizes="360px"
                 />
                 <div
                   className="transition-opacity duration-500"
@@ -83,7 +101,7 @@ export default function PortfolioExplorer({ modelsSection, models }: PortfolioEx
                     inset: 0,
                     background:
                       "linear-gradient(to top, rgba(10,10,10,0.92) 0%, rgba(10,10,10,0.4) 45%, transparent 100%)",
-                    opacity: 0.65,
+                    opacity: 0.75,
                   }}
                 />
               </div>
@@ -127,9 +145,9 @@ export default function PortfolioExplorer({ modelsSection, models }: PortfolioEx
                   <DetailItem label="EYES" value={model.eyes} />
                 </div>
               </div>
-            </motion.div>
+            </div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

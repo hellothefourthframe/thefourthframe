@@ -5,13 +5,6 @@ import { useRef } from "react";
 import Image from "next/image";
 import type { SectionHeader, Founder } from "../lib/types";
 
-const cardReveal = {
-  type: "spring",
-  stiffness: 170,
-  damping: 22,
-  mass: 0.8,
-} as const;
-
 interface FoundersProps {
   foundersSection: SectionHeader;
   founders: Founder[];
@@ -21,8 +14,15 @@ export default function Founders({ foundersSection, founders }: FoundersProps) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
+  const speedDuration = foundersSection.sliderSpeed && foundersSection.sliderSpeed > 0
+    ? foundersSection.sliderSpeed
+    : 20;
+
+  // Duplicate items for continuous seamless loop
+  const displayFounders = [...founders, ...founders, ...founders];
+
   return (
-    <section className="section bg-white anchor-section" id="founders" ref={ref}>
+    <section className="section bg-white anchor-section overflow-hidden" id="founders" ref={ref}>
       <div className="page-container">
         <div className="section-center mb-16">
           <motion.span
@@ -36,27 +36,50 @@ export default function Founders({ foundersSection, founders }: FoundersProps) {
             className="section-title"
             initial={{ opacity: 0, y: 15 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ ...cardReveal, delay: 0.1 }}
+            transition={{ type: "spring", stiffness: 170, damping: 22, delay: 0.1 }}
           >
             {foundersSection.title}{" "}
             <span className="accent-text" style={{ fontStyle: "italic" }}>{foundersSection.titleAccent}</span>
           </motion.h2>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12" style={{ perspective: "1200px" }}>
-          {founders.map((founder, i) => (
-            <motion.div
+      {/* Continuous Smooth Auto-scrolling Carousel */}
+      <div
+        style={{
+          width: "100%",
+          overflow: "hidden",
+          position: "relative",
+          padding: "1rem 0 2rem 0",
+        }}
+      >
+        <motion.div
+          style={{
+            display: "flex",
+            gap: "2.5rem",
+            width: "max-content",
+          }}
+          animate={{ x: ["0%", "-33.333%"] }}
+          transition={{
+            ease: "linear",
+            duration: speedDuration,
+            repeat: Infinity,
+          }}
+        >
+          {displayFounders.map((founder, i) => (
+            <div
               key={`${founder.role}-${founder.image}-${i}`}
-              className="group relative h-[520px] w-full overflow-hidden cursor-pointer"
-              style={{ borderRadius: "var(--radius-xl)", transformStyle: "preserve-3d" }}
-              initial={{ opacity: 0, y: 40, rotateX: 15 }}
-              animate={isInView ? { opacity: 1, y: 0, rotateX: 0 } : {}}
-              transition={{ ...cardReveal, delay: 0.12 + i * 0.08 }}
-              whileHover={{
-                scale: 1.02,
-                rotateY: i === 0 ? 5 : i === 2 ? -5 : 0,
-                rotateX: 4,
-                boxShadow: "var(--shadow-strong)"
+              className="group"
+              style={{
+                position: "relative",
+                height: "520px",
+                width: "380px",
+                flexShrink: 0,
+                overflow: "hidden",
+                borderRadius: "30px",
+                cursor: "pointer",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                transition: "transform 0.4s ease, box-shadow 0.4s ease",
               }}
             >
               <div className="absolute inset-0 z-0">
@@ -66,7 +89,7 @@ export default function Founders({ foundersSection, founders }: FoundersProps) {
                   alt={founder.name}
                   fill
                   className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                  sizes="(max-width: 768px) 100vw, 33vw"
+                  sizes="380px"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/20 to-transparent opacity-60 group-hover:opacity-85 transition-opacity duration-500" />
               </div>
@@ -105,9 +128,9 @@ export default function Founders({ foundersSection, founders }: FoundersProps) {
                   {founder.name}
                 </h4>
               </div>
-            </motion.div>
+            </div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

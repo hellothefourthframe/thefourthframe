@@ -412,6 +412,7 @@ function FoundersSection({ content, onSave, onUpload, onDelete }: SectionProps) 
         <Field label="Label" value={section.label} onChange={(v) => setSection({ ...section, label: v })} />
         <Field label="Title" value={section.title} onChange={(v) => setSection({ ...section, title: v })} />
         <Field label="Title Accent" value={section.titleAccent} onChange={(v) => setSection({ ...section, titleAccent: v })} />
+        <Field label="Slider Speed (seconds)" value={String(section.sliderSpeed ?? 20)} onChange={(v) => setSection({ ...section, sliderSpeed: Number(v) || 20 })} />
       </div>
 
       <h3 style={S.subTitle}>Founders</h3>
@@ -456,27 +457,28 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
     setServices(s);
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, i: number) => {
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>, i: number) => {
     const file = e.target.files?.[0];
     if (!file || !onUpload) return;
     setUploading(i);
-    const path = await onUpload(file, "image");
+    const path = await onUpload(file, "video");
     if (path) {
-      if (isManagedUploadPath(services[i].image) && onDelete) {
-        await onDelete(services[i].image);
+      const oldMedia = services[i]?.video || services[i]?.image;
+      if (oldMedia && isManagedUploadPath(oldMedia) && onDelete) {
+        await onDelete(oldMedia);
       }
-      updateService(i, "image", path);
+      updateService(i, "video", path);
     }
     setUploading(null);
     e.target.value = "";
   };
 
-  const removeServiceImage = async (i: number) => {
-    const imagePath = services[i]?.image;
-    if (imagePath && isManagedUploadPath(imagePath) && onDelete) {
-      await onDelete(imagePath);
+  const removeServiceVideo = async (i: number) => {
+    const mediaPath = services[i]?.video || services[i]?.image;
+    if (mediaPath && isManagedUploadPath(mediaPath) && onDelete) {
+      await onDelete(mediaPath);
     }
-    updateService(i, "image", "");
+    updateService(i, "video", "");
   };
 
   const addService = () => {
@@ -484,10 +486,7 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
       ...services,
       {
         title: "",
-        description: "",
-        image: "",
-        details: "",
-        includes: [],
+        video: "",
       },
     ]);
   };
@@ -495,10 +494,7 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
   const saveServices = () => {
     const normalizedServices = services.map((service) => ({
       title: service.title,
-      description: service.description,
-      image: service.image,
-      details: service.details,
-      includes: Array.isArray(service.includes) ? service.includes : [],
+      video: service.video || service.image || "",
     }));
 
     onSave({ servicesSection: section, services: normalizedServices });
@@ -514,63 +510,48 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
       </div>
 
       <h3 style={S.subTitle}>Services</h3>
-      <p style={S.hint}>Service cards use only the image saved in the database. Upload an image for every service you want visible on the site.</p>
-      {services.map((service, i) => (
-        <div key={i} style={S.card}>
-          <div style={S.cardHeader}>
-            <div style={S.cardTitleField}>
-              <label style={S.fieldLabel}>Service Name</label>
-              <input
-                style={S.fieldInput}
-                value={service.title}
-                placeholder="Type service name"
-                onChange={(e) => updateService(i, "title", e.target.value)}
-              />
-            </div>
-            <button style={S.removeBtn} onClick={() => setServices(services.filter((_, j) => j !== i))}>Remove</button>
-          </div>
-          <FieldTextarea label="Description" value={service.description} onChange={(v) => updateService(i, "description", v)} />
-          <Field label="Details" value={service.details} onChange={(v) => updateService(i, "details", v)} />
-
-          {service.image ? (
-            <div style={S.mediaPreview}>
-              <img src={service.image} alt={service.title} style={S.previewImg} />
-              <div style={S.mediaActions}>
-                <span style={S.mediaStatus}>Image set</span>
-                <button style={S.removeBtn} onClick={() => removeServiceImage(i)}>Remove Image</button>
-              </div>
-            </div>
-          ) : (
-            <p style={S.noMedia}>No image uploaded for this service.</p>
-          )}
-          <label style={S.uploadLabel}>
-            {uploading === i ? "Uploading..." : "Upload Image"}
-            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => handleImageUpload(e, i)} style={S.fileInput} disabled={uploading !== null} />
-          </label>
-
-          <div style={{ marginTop: "1rem" }}>
-            <h5 style={{ ...S.subTitle, fontSize: "0.7rem" }}>Includes</h5>
-            {service.includes.map((item, j) => (
-              <div key={j} style={S.row}>
+      <p style={S.hint}>Upload an MP4 video and enter a Service Name for each card.</p>
+      {services.map((service, i) => {
+        const videoSrc = service.video || service.image;
+        return (
+          <div key={i} style={S.card}>
+            <div style={S.cardHeader}>
+              <div style={S.cardTitleField}>
+                <label style={S.fieldLabel}>Service Name</label>
                 <input
-                  style={S.inputFlex}
-                  value={item}
-                  onChange={(e) => {
-                    const includes = [...service.includes];
-                    includes[j] = e.target.value;
-                    updateService(i, "includes", includes);
-                  }}
+                  style={S.fieldInput}
+                  value={service.title}
+                  placeholder="Type service name"
+                  onChange={(e) => updateService(i, "title", e.target.value)}
                 />
-                <button style={S.removeBtn} onClick={() => {
-                  const includes = service.includes.filter((_: string, k: number) => k !== j);
-                  updateService(i, "includes", includes);
-                }}>✕</button>
               </div>
-            ))}
-            <button style={S.addBtnSmall} onClick={() => updateService(i, "includes", [...service.includes, ""])}>+ Add</button>
+              <button style={S.removeBtn} onClick={() => setServices(services.filter((_, j) => j !== i))}>Remove</button>
+            </div>
+
+            {videoSrc ? (
+              <div style={S.mediaPreview}>
+                <video src={videoSrc} style={S.previewVideo} controls muted />
+                <div style={S.mediaActions}>
+                  <span style={S.mediaPath}>{videoSrc}</span>
+                  <button style={S.removeBtn} onClick={() => removeServiceVideo(i)}>Remove Video</button>
+                </div>
+              </div>
+            ) : (
+              <p style={S.noMedia}>No video set for this service.</p>
+            )}
+            <label style={S.uploadLabel}>
+              {uploading === i ? "Uploading..." : "Upload Video (MP4)"}
+              <input
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime"
+                onChange={(e) => handleVideoUpload(e, i)}
+                style={S.fileInput}
+                disabled={uploading !== null}
+              />
+            </label>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       <button style={S.addBtn} onClick={addService}>+ Add Service</button>
       <button style={S.saveBtn} onClick={saveServices}>Save Services</button>
@@ -612,6 +593,7 @@ function ModelsSection({ content, onSave, onUpload, onDelete }: SectionProps) {
         <Field label="Label" value={section.label} onChange={(v) => setSection({ ...section, label: v })} />
         <Field label="Title" value={section.title} onChange={(v) => setSection({ ...section, title: v })} />
         <Field label="Title Accent" value={section.titleAccent} onChange={(v) => setSection({ ...section, titleAccent: v })} />
+        <Field label="Slider Speed (seconds)" value={String(section.sliderSpeed ?? 25)} onChange={(v) => setSection({ ...section, sliderSpeed: Number(v) || 25 })} />
       </div>
 
       <h3 style={S.subTitle}>Models</h3>

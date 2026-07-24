@@ -1,5 +1,4 @@
 import { upload } from "@vercel/blob/client";
-import { transcodeToH264 } from "./transcodeVideo";
 
 export async function uploadFile(
   file: File,
@@ -7,13 +6,15 @@ export async function uploadFile(
   handleUploadUrl: string,
   onProgress?: (ratio: number) => void
 ) {
-  const finalFile =
-    type === "video" ? await transcodeToH264(file, onProgress) : file;
-
-  const blob = await upload(finalFile.name, finalFile, {
+  const blob = await upload(file.name, file, {
     access: "public",
     handleUploadUrl,
     clientPayload: JSON.stringify({ type }),
+    onUploadProgress: (progress) => {
+      if (onProgress) {
+        onProgress(progress.percentage / 100);
+      }
+    },
   });
 
   return {

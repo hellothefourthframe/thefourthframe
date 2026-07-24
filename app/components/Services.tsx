@@ -2,7 +2,6 @@
 
 import { motion, useInView } from "motion/react";
 import { useRef } from "react";
-import Image from "next/image";
 import type { SectionHeader, Service } from "../lib/types";
 
 const cardReveal = {
@@ -20,9 +19,11 @@ interface ServicesProps {
 export default function Services({ servicesSection, services }: ServicesProps) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
-  const visibleServices = services.filter(
-    (service) => service.title.trim() && service.image.trim()
-  );
+
+  const visibleServices = services.filter((service) => {
+    const videoOrImage = service.video || service.image;
+    return service.title.trim() && videoOrImage && videoOrImage.trim();
+  });
 
   return (
     <section className="section bg-white anchor-section" id="services" ref={ref}>
@@ -47,73 +48,92 @@ export default function Services({ servicesSection, services }: ServicesProps) {
         </div>
 
         <div className="services-grid-premium">
-          {visibleServices.map((s, i) => (
-            <motion.div
-              key={`${s.title}-${s.image}-${i}`}
-              className="service-showcase-card"
-              initial={{ opacity: 0, y: 30 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ ...cardReveal, delay: 0.16 + i * 0.08 }}
-              whileHover={{ y: -6 }}
-            >
-              <div className="service-flip">
-                <div className="service-flip-inner">
-                  {/* FRONT */}
-                  <div className="service-face service-front">
-                    <div className="service-media">
-                      <Image
-                        key={s.image}
-                        src={s.image}
-                        alt={s.title}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                        className="service-showcase-image"
-                      />
-                      <div className="service-media-overlay" />
-                    </div>
+          {visibleServices.map((s, i) => {
+            const mediaSrc = s.video || s.image || "";
+            const isVideo = mediaSrc.endsWith(".mp4") || mediaSrc.endsWith(".webm") || mediaSrc.includes("blob");
 
-                    <div className="service-front-overlay">
-                      <h3 className="service-showcase-title">{s.title}</h3>
-
-                      <div className="service-front-mobile-details">
-                        <p className="service-showcase-desc">{s.description}</p>
-                        <div className="service-showcase-meta">{s.details}</div>
-
-                        {s.includes && Array.isArray(s.includes) && s.includes.length > 0 ? (
-                          <ul className="service-showcase-list">
-                            {s.includes.map((item) => (
-                              <li key={item}>{item}</li>
-                            ))}
-                          </ul>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* BACK */}
-                  <div className="service-face service-back">
-                    <div className="service-back-shell">
-                      <div className="service-back-top">
-                        <span className="service-showcase-kicker">WHAT WE PROVIDE</span>
-                        <h3 className="service-back-title">{s.title}</h3>
-                        <p className="service-back-desc">{s.description}</p>
-                      </div>
-
-                      {s.includes && Array.isArray(s.includes) && s.includes.length > 0 ? (
-                        <ul className="service-showcase-list">
-                          {s.includes.map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
-                      ) : null}
-
-                      <div className="service-back-meta">{s.details}</div>
-                    </div>
-                  </div>
+            return (
+              <motion.div
+                key={`${s.title}-${mediaSrc}-${i}`}
+                className="service-showcase-card group"
+                style={{
+                  position: "relative",
+                  height: "480px",
+                  borderRadius: "24px",
+                  overflow: "hidden",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
+                }}
+                initial={{ opacity: 0, y: 30 }}
+                animate={isInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ ...cardReveal, delay: 0.16 + i * 0.08 }}
+                whileHover={{ y: -8, boxShadow: "0 22px 50px rgba(0,0,0,0.15)" }}
+              >
+                <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+                  {isVideo ? (
+                    <video
+                      key={mediaSrc}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    >
+                      <source src={mediaSrc} type="video/mp4" />
+                    </video>
+                  ) : (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      key={mediaSrc}
+                      src={mediaSrc}
+                      alt={s.title}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  )}
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background:
+                        "linear-gradient(to top, rgba(10,10,10,0.9) 0%, rgba(10,10,10,0.3) 50%, transparent 100%)",
+                    }}
+                  />
                 </div>
-              </div>
-            </motion.div>
-          ))}
+
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    width: "100%",
+                    padding: "3rem 2rem 2.5rem 2rem",
+                    zIndex: 10,
+                  }}
+                >
+                  <h3
+                    style={{
+                      fontFamily: "var(--font-heading)",
+                      fontSize: "clamp(1.4rem, 2vw, 1.8rem)",
+                      fontWeight: 600,
+                      color: "#ffffff",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      textShadow: "0 2px 10px rgba(0,0,0,0.5)",
+                    }}
+                  >
+                    {s.title}
+                  </h3>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </section>

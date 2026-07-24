@@ -56,6 +56,7 @@ export const FOUNDERS_SECTION = {
   label: "LEADERSHIP",
   title: "The Faces Behind",
   titleAccent: "The Fourth Frame",
+  sliderSpeed: 20,
 } as const;
 
 export const FOUNDERS = [
@@ -87,46 +88,23 @@ export const SERVICES_SECTION = {
 export const SERVICES = [
   {
     title: "BACKSTAGE",
-    description:
-      "Complete backstage support to keep the show running smoothly — from team setup to choreography coordination.",
+    video: "/main/main.mp4",
     image: "/main/S3.jpeg",
-    details: "TEAM | COORDINATION | CHOREOGRAPHY",
-    includes: [
-      "Provide a professional team",
-      "Provide a professional coordinator & choreographer",
-    ],
   },
   {
     title: "BRAND SHOOT",
-    description:
-      "End-to-end brand shoot execution — talent, setup, and on-ground creative support for premium results.",
+    video: "/main/mianveritical.mp4",
     image: "/main/S1.jpeg",
-    details: "MODELS | LOCATION | MAKEUP",
-    includes: [
-      "Provide models",
-      "Provide location & studio",
-      "Provide makeup artist",
-    ],
   },
   {
     title: "PROFESSIONAL EDITORS",
-    description:
-      "Editing that matches your brand’s pace and polish — from short-form education to full event storytelling.",
+    video: "/main/CTABG.mp4",
     image: "/main/S4.jpeg",
-    details: "REELS | SHORTS | EVENT FILMS",
-    includes: [
-      "Educational reel",
-      "Pre-wedding short song",
-      "Complete event reel",
-    ],
   },
   {
     title: "BTS MAN",
-    description:
-      "Dedicated behind-the-scenes coverage to capture the process and energy on set — perfect for social-first content.",
+    video: "/main/main.mp4",
     image: "/main/S2.jpeg",
-    details: "ON-SET | STORY | SOCIAL",
-    includes: ["Behind-the-scenes capture & coverage"],
   },
 ] as const;
 
@@ -136,6 +114,7 @@ export const MODELS_SECTION = {
   label: "OUR TALENT",
   title: "Models",
   titleAccent: "Roster",
+  sliderSpeed: 25,
 } as const;
 
 export const MODELS = [

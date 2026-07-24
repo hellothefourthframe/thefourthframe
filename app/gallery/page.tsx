@@ -83,12 +83,12 @@ export default function GalleryPage() {
         // Override default service images with updated ones from admin database
         if (data.services && data.services.length > 0) {
           data.services.forEach((s, idx) => {
-            if (s.image && dynamicItems[idx]) {
+            const mediaSrc = s.video || s.image;
+            if (mediaSrc && dynamicItems[idx]) {
               dynamicItems[idx] = {
                 ...dynamicItems[idx],
                 title: s.title || dynamicItems[idx].title,
-                src: s.image,
-                description: s.description || dynamicItems[idx].description,
+                src: mediaSrc,
               };
             }
           });

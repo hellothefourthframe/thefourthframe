@@ -33,6 +33,7 @@ export interface SectionHeader {
   label: string;
   title: string;
   titleAccent: string;
+  sliderSpeed?: number;
 }
 
 export interface Founder {
@@ -44,10 +45,11 @@ export interface Founder {
 export interface Service {
   index?: string;
   title: string;
-  description: string;
-  image: string;
-  details: string;
-  includes: string[];
+  video: string;
+  image?: string;
+  description?: string;
+  details?: string;
+  includes?: string[];
 }
 
 export interface Model {

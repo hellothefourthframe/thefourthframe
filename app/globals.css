@@ -2763,6 +2763,22 @@ p {
     columns: 1;
   }
 
+  .contact-form-premium {
+    padding: 2rem 1.25rem;
+    border-radius: 1.2rem;
+  }
+
+  .agency-form .form-row {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .agency-form .input-group {
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+
   .gallery-card,
   .gallery-card-landscape,
   .gallery-card-square,

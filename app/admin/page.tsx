@@ -42,9 +42,28 @@ export default function AdminDashboard() {
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
   const [activeSection, setActiveSection] = useState("site");
 
+  // Theme State: "dark" | "light"
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  // Live Upload Progress State
+  const [uploadProgress, setUploadProgress] = useState<{ active: boolean; percent: number; fileName: string } | null>(null);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("admin_theme");
+    if (savedTheme === "light" || savedTheme === "dark") {
+      setTheme(savedTheme);
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    localStorage.setItem("admin_theme", nextTheme);
+  };
+
   const showToast = useCallback((msg: string, type: "ok" | "err" = "ok") => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 3500);
   }, []);
 
   // Check auth
@@ -77,9 +96,9 @@ export default function AdminDashboard() {
       });
       if (!res.ok) throw new Error();
       setContent((prev) => (prev ? { ...prev, ...updates } : prev));
-      showToast("Saved successfully!");
+      showToast("Saved successfully to Database!");
     } catch {
-      showToast("Failed to save", "err");
+      showToast("Failed to save to Database", "err");
     } finally {
       setSaving(false);
     }
@@ -98,10 +117,25 @@ export default function AdminDashboard() {
       }
     }
 
+    setUploadProgress({ active: true, percent: 15, fileName: file.name });
+
+    const timer = setInterval(() => {
+      setUploadProgress((prev) => {
+        if (!prev) return null;
+        const next = prev.percent + Math.floor(Math.random() * 15) + 10;
+        return { ...prev, percent: next >= 92 ? 92 : next };
+      });
+    }, 250);
+
     try {
       const result = await blobUpload(file, type, "/api/admin/upload");
+      clearInterval(timer);
+      setUploadProgress({ active: true, percent: 100, fileName: file.name });
+      setTimeout(() => setUploadProgress(null), 800);
       return result.path;
     } catch (err) {
+      clearInterval(timer);
+      setUploadProgress(null);
       showToast(err instanceof Error ? err.message : "Upload failed", "err");
       return null;
     }
@@ -124,19 +158,21 @@ export default function AdminDashboard() {
     router.push("/admin/login");
   };
 
+  const styles = getThemeStyles(theme);
+
   if (loading) {
     return (
-      <div style={S.center}>
-        <div style={S.spinner} />
+      <div style={{ ...styles.center, background: styles.bg }}>
+        <div style={styles.spinner} />
       </div>
     );
   }
 
   if (!content) {
     return (
-      <div style={S.center}>
-        <div style={S.spinner} />
-        <p style={{ color: "rgba(255,255,255,0.5)", marginTop: "1rem" }}>Loading content...</p>
+      <div style={{ ...styles.center, background: styles.bg }}>
+        <div style={styles.spinner} />
+        <p style={{ color: styles.textMuted, marginTop: "1rem" }}>Loading content...</p>
       </div>
     );
   }
@@ -153,72 +189,181 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div style={S.layout}>
+    <div className="admin-layout" style={{ ...styles.layout, background: styles.bg, color: styles.text }}>
+      <style jsx global>{`
+        @media (max-width: 768px) {
+          .admin-layout {
+            flex-direction: column !important;
+            min-height: auto !important;
+          }
+          .admin-sidebar {
+            width: 100% !important;
+            height: auto !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
+            border-right: none !important;
+            border-bottom: 1px solid ${theme === "dark" ? "rgba(255,255,255,0.1)" : "#e2e8f0"} !important;
+            padding: 0.75rem 1rem !important;
+            background: ${theme === "dark" ? "#121215" : "#ffffff"} !important;
+          }
+          .admin-sidebar-logo {
+            margin-bottom: 0.6rem !important;
+            padding-bottom: 0.6rem !important;
+            border-bottom: 1px solid ${theme === "dark" ? "rgba(255,255,255,0.06)" : "#f1f5f9"} !important;
+          }
+          .admin-nav {
+            flex-direction: row !important;
+            overflow-x: auto !important;
+            white-space: nowrap !important;
+            padding-bottom: 0.25rem !important;
+            gap: 0.4rem !important;
+            -webkit-overflow-scrolling: touch;
+          }
+          .admin-nav-btn {
+            white-space: nowrap !important;
+            padding: 0.45rem 0.8rem !important;
+            font-size: 0.78rem !important;
+            flex-shrink: 0 !important;
+          }
+          .admin-main {
+            padding: 1rem 0.85rem !important;
+            max-height: none !important;
+            width: 100% !important;
+          }
+          .admin-header {
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 0.5rem !important;
+            margin-bottom: 1.25rem !important;
+            padding-bottom: 0.75rem !important;
+          }
+          .admin-header-title {
+            font-size: 1.25rem !important;
+          }
+          .admin-content {
+            max-width: 100% !important;
+            width: 100% !important;
+          }
+        }
+      `}</style>
+
       {/* Sidebar */}
-      <aside style={S.sidebar}>
-        <div style={S.sidebarLogo}>
-          <span style={S.logoMark}>TF</span>
-          <span style={S.logoText}>ADMIN</span>
+      <aside className="admin-sidebar" style={styles.sidebar}>
+        <div className="admin-sidebar-logo" style={styles.sidebarLogo}>
+          <span style={styles.logoMark}>TF</span>
+          <span style={styles.logoText}>ADMIN PANEL</span>
         </div>
-        <nav style={S.nav}>
+        <nav className="admin-nav" style={styles.nav}>
           {sections.map((s) => (
             <button
               key={s.key}
+              className="admin-nav-btn"
               onClick={() => setActiveSection(s.key)}
               style={{
-                ...S.navBtn,
-                ...(activeSection === s.key ? S.navBtnActive : {}),
+                ...styles.navBtn,
+                ...(activeSection === s.key ? styles.navBtnActive : {}),
               }}
             >
               {s.label}
             </button>
           ))}
         </nav>
-        <button onClick={handleLogout} style={S.logoutBtn}>
+        <button onClick={handleLogout} style={styles.logoutBtn}>
           LOGOUT
         </button>
       </aside>
 
       {/* Main content */}
-      <main style={S.main}>
-        <header style={S.header}>
-          <h1 style={S.headerTitle}>
+      <main className="admin-main" style={styles.main}>
+        <header className="admin-header" style={styles.header}>
+          <h1 className="admin-header-title" style={styles.headerTitle}>
             {sections.find((s) => s.key === activeSection)?.label}
           </h1>
-          {saving && <span style={S.savingBadge}>Saving...</span>}
+
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginLeft: "auto" }}>
+            {saving && <span style={styles.savingBadge}>Saving...</span>}
+          </div>
         </header>
 
-        <div style={S.content}>
+        <div className="admin-content" style={styles.content}>
           {activeSection === "site" && (
-            <SiteSection content={content} onSave={saveContent} />
+            <SiteSection content={content} onSave={saveContent} styles={styles} />
           )}
           {activeSection === "social" && (
-            <SocialSection content={content} onSave={saveContent} />
+            <SocialSection content={content} onSave={saveContent} styles={styles} />
           )}
           {activeSection === "hero" && (
-            <HeroSection content={content} onSave={saveContent} onUpload={uploadFile} onDelete={deleteFile} />
+            <HeroSection content={content} onSave={saveContent} onUpload={uploadFile} onDelete={deleteFile} styles={styles} />
           )}
           {activeSection === "founders" && (
-            <FoundersSection content={content} onSave={saveContent} onUpload={uploadFile} onDelete={deleteFile} />
+            <FoundersSection content={content} onSave={saveContent} onUpload={uploadFile} onDelete={deleteFile} styles={styles} />
           )}
           {activeSection === "services" && (
-            <ServicesSection content={content} onSave={saveContent} onUpload={uploadFile} onDelete={deleteFile} />
+            <ServicesSection content={content} onSave={saveContent} onUpload={uploadFile} onDelete={deleteFile} styles={styles} />
           )}
           {activeSection === "models" && (
-            <ModelsSection content={content} onSave={saveContent} onUpload={uploadFile} onDelete={deleteFile} />
+            <ModelsSection content={content} onSave={saveContent} onUpload={uploadFile} onDelete={deleteFile} styles={styles} />
           )}
           {activeSection === "contact" && (
-            <ContactSection showToast={showToast} />
+            <ContactSection showToast={showToast} styles={styles} />
           )}
           {activeSection === "footer" && (
-            <FooterSection content={content} onSave={saveContent} onUpload={uploadFile} onDelete={deleteFile} />
+            <FooterSection content={content} onSave={saveContent} onUpload={uploadFile} onDelete={deleteFile} styles={styles} />
           )}
         </div>
       </main>
 
-      {/* Toast */}
+      {/* Live Upload Progress Modal Card */}
+      {uploadProgress && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "2rem",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "90%",
+            maxWidth: "420px",
+            background: theme === "dark" ? "#18181b" : "#ffffff",
+            border: `1px solid ${theme === "dark" ? "#27272a" : "#e4e4e7"}`,
+            borderRadius: "14px",
+            padding: "1.25rem",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+            zIndex: 99999,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem" }}>
+            <span style={{ fontSize: "0.82rem", fontWeight: 600, color: styles.text }}>
+              Uploading {uploadProgress.fileName.length > 20 ? `${uploadProgress.fileName.slice(0, 20)}...` : uploadProgress.fileName}
+            </span>
+            <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#C9A84C" }}>
+              {uploadProgress.percent}%
+            </span>
+          </div>
+
+          <div style={{ height: "8px", background: theme === "dark" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)", borderRadius: "4px", overflow: "hidden" }}>
+            <div
+              style={{
+                width: `${uploadProgress.percent}%`,
+                height: "100%",
+                background: "linear-gradient(90deg, #C9A84C 0%, #F3E5AB 100%)",
+                borderRadius: "4px",
+                transition: "width 0.25s ease-out",
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
       {toast && (
-        <div style={{ ...S.toast, background: toast.type === "ok" ? "#16a34a" : "#dc2626" }}>
+        <div
+          style={{
+            ...styles.toast,
+            background: toast.type === "err" ? "#dc2626" : "#059669",
+          }}
+        >
           {toast.msg}
         </div>
       )}
@@ -227,45 +372,44 @@ export default function AdminDashboard() {
 }
 
 // ─────────────────────────────────────────────────────────
-// Section Components
+// Section Component Definitions
 // ─────────────────────────────────────────────────────────
 
 interface SectionProps {
   content: SiteContent;
-  onSave: (u: Partial<SiteContent>) => Promise<void>;
-  onUpload?: (f: File, t: "image" | "video") => Promise<string | null>;
-  onDelete?: (p: string) => Promise<void>;
+  onSave: (updates: Partial<SiteContent>) => Promise<void>;
+  onUpload?: (file: File, type: "image" | "video") => Promise<string | null>;
+  onDelete?: (filePath: string) => Promise<void>;
+  styles: AdminStyles;
 }
 
-// ── SITE INFO ─────────────────────────────────────────
-function SiteSection({ content, onSave }: SectionProps) {
+// ── SITE INFO ──────────────────────────────────────────
+function SiteSection({ content, onSave, styles }: SectionProps) {
   const [site, setSite] = useState(content.site);
 
-  const save = () => onSave({ site });
-
   return (
-    <div style={S.sectionWrap}>
-      <Field label="Site Name" value={site.name} onChange={(v) => setSite({ ...site, name: v })} />
-      <Field label="Operated By" value={site.operatedBy} onChange={(v) => setSite({ ...site, operatedBy: v })} />
-      <Field label="Established" value={String(site.established)} onChange={(v) => setSite({ ...site, established: Number(v) || site.established })} />
-      <Field label="Logo Path" value={site.logo} onChange={(v) => setSite({ ...site, logo: v })} />
-      <Field label="Email" value={site.email} onChange={(v) => setSite({ ...site, email: v })} />
-      <Field label="Footer Email" value={site.footerEmail} onChange={(v) => setSite({ ...site, footerEmail: v })} />
-      <Field label="Footer Email Href" value={site.footerEmailHref} onChange={(v) => setSite({ ...site, footerEmailHref: v })} />
+    <div style={styles.sectionWrap}>
+      <Field label="Site Name" value={site.name} onChange={(v) => setSite({ ...site, name: v })} styles={styles} />
+      <Field label="Operated By" value={site.operatedBy} onChange={(v) => setSite({ ...site, operatedBy: v })} styles={styles} />
+      <Field label="Established Year" value={String(site.established)} onChange={(v) => setSite({ ...site, established: Number(v) || 2024 })} styles={styles} />
+      <Field label="Logo Path" value={site.logo} onChange={(v) => setSite({ ...site, logo: v })} styles={styles} />
+      <Field label="Email" value={site.email} onChange={(v) => setSite({ ...site, email: v })} styles={styles} />
+      <Field label="Footer Email" value={site.footerEmail} onChange={(v) => setSite({ ...site, footerEmail: v })} styles={styles} />
+      <Field label="Footer Email Link (mailto:)" value={site.footerEmailHref} onChange={(v) => setSite({ ...site, footerEmailHref: v })} styles={styles} />
 
-      <div style={S.subGroup}>
-        <h3 style={S.subTitle}>Location</h3>
-        <Field label="Studio" value={site.location.studio} onChange={(v) => setSite({ ...site, location: { ...site.location, studio: v } })} />
-        <Field label="City" value={site.location.city} onChange={(v) => setSite({ ...site, location: { ...site.location, city: v } })} />
-        <Field label="Country" value={site.location.country} onChange={(v) => setSite({ ...site, location: { ...site.location, country: v } })} />
+      <div style={styles.subGroup}>
+        <h3 style={styles.subTitle}>Studio Location</h3>
+        <Field label="Studio Name" value={site.location.studio} onChange={(v) => setSite({ ...site, location: { ...site.location, studio: v } })} styles={styles} />
+        <Field label="City" value={site.location.city} onChange={(v) => setSite({ ...site, location: { ...site.location, city: v } })} styles={styles} />
+        <Field label="Country" value={site.location.country} onChange={(v) => setSite({ ...site, location: { ...site.location, country: v } })} styles={styles} />
       </div>
 
-      <div style={S.subGroup}>
-        <h3 style={S.subTitle}>Badges</h3>
+      <div style={styles.subGroup}>
+        <h3 style={styles.subTitle}>Badges</h3>
         {site.badges.map((badge, i) => (
-          <div key={i} style={S.row}>
+          <div key={i} style={styles.row}>
             <input
-              style={S.inputFlex}
+              style={styles.inputFlex}
               value={badge}
               onChange={(e) => {
                 const b = [...site.badges];
@@ -273,118 +417,126 @@ function SiteSection({ content, onSave }: SectionProps) {
                 setSite({ ...site, badges: b });
               }}
             />
-            <button style={S.removeBtn} onClick={() => {
-              const b = site.badges.filter((_, j) => j !== i);
-              setSite({ ...site, badges: b });
-            }}>✕</button>
+            <button style={styles.removeBtn} onClick={() => setSite({ ...site, badges: site.badges.filter((_, j) => j !== i) })}>✕</button>
           </div>
         ))}
-        <button style={S.addBtn} onClick={() => setSite({ ...site, badges: [...site.badges, ""] })}>+ Add Badge</button>
+        <button style={styles.addBtnSmall} onClick={() => setSite({ ...site, badges: [...site.badges, ""] })}>+ Add Badge</button>
       </div>
 
-      <button style={S.saveBtn} onClick={save}>Save Site Info</button>
+      <button style={styles.saveBtn} onClick={() => onSave({ site })}>Save Site Info</button>
     </div>
   );
 }
 
-// ── SOCIAL LINKS ──────────────────────────────────────
-function SocialSection({ content, onSave }: SectionProps) {
+// ── SOCIAL LINKS ───────────────────────────────────────
+function SocialSection({ content, onSave, styles }: SectionProps) {
   const [links, setLinks] = useState(content.socialLinks);
 
-  const update = (i: number, key: string, val: string) => {
-    const l = [...links];
-    l[i] = { ...l[i], [key]: val };
-    setLinks(l);
-  };
-
-  const save = () => onSave({ socialLinks: links });
-
   return (
-    <div style={S.sectionWrap}>
+    <div style={styles.sectionWrap}>
       {links.map((link, i) => (
-        <div key={i} style={S.card}>
-          <div style={S.cardHeader}>
-            <h3 style={S.cardTitle}>Link #{i + 1}</h3>
-            <button style={S.removeBtn} onClick={() => setLinks(links.filter((_, j) => j !== i))}>Remove</button>
+        <div key={i} style={styles.card}>
+          <div style={styles.cardHeader}>
+            <h4 style={styles.cardTitle}>{link.label || `Link #${i + 1}`}</h4>
+            <button style={styles.removeBtn} onClick={() => setLinks(links.filter((_, j) => j !== i))}>Remove</button>
           </div>
-          <Field label="Label" value={link.label} onChange={(v) => update(i, "label", v)} />
-          <Field label="URL" value={link.href} onChange={(v) => update(i, "href", v)} />
-          <Field label="Handle" value={link.handle} onChange={(v) => update(i, "handle", v)} />
+          <Field label="Label" value={link.label} onChange={(v) => {
+            const l = [...links];
+            l[i] = { ...l[i], label: v };
+            setLinks(l);
+          }} styles={styles} />
+          <Field label="URL (href)" value={link.href} onChange={(v) => {
+            const l = [...links];
+            l[i] = { ...l[i], href: v };
+            setLinks(l);
+          }} styles={styles} />
+          <Field label="Handle" value={link.handle} onChange={(v) => {
+            const l = [...links];
+            l[i] = { ...l[i], handle: v };
+            setLinks(l);
+          }} styles={styles} />
         </div>
       ))}
-      <button style={S.addBtn} onClick={() => setLinks([...links, { label: "", href: "", handle: "" }])}>+ Add Social Link</button>
-      <button style={S.saveBtn} onClick={save}>Save Social Links</button>
+      <button style={styles.addBtn} onClick={() => setLinks([...links, { label: "", href: "", handle: "" }])}>+ Add Social Link</button>
+      <button style={styles.saveBtn} onClick={() => onSave({ socialLinks: links })}>Save Social Links</button>
     </div>
   );
 }
 
-// ── HERO MEDIA ────────────────────────────────────────
-function HeroSection({ content, onSave, onUpload, onDelete }: SectionProps) {
-  const [hero, setHero] = useState(content.heroMedia);
-  const [uploading, setUploading] = useState<string | null>(null);
+// ── HERO MEDIA ─────────────────────────────────────────
+function HeroSection({ content, onSave, onUpload, onDelete, styles }: SectionProps) {
+  const [media, setMedia] = useState(content.heroMedia);
+  const [uploading, setUploading] = useState(false);
 
-  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: "desktopVideo" | "mobileVideo") => {
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !onUpload) return;
-    setUploading(field);
+
+    setUploading(true);
     const path = await onUpload(file, "video");
+
     if (path) {
-      // Delete old file if it's an uploaded one
-      if (isManagedUploadPath(hero[field]) && onDelete) {
-        await onDelete(hero[field]);
+      if (isManagedUploadPath(media.desktopVideo) && onDelete) {
+        await onDelete(media.desktopVideo);
       }
-      setHero({ ...hero, [field]: path });
+      setMedia({ ...media, desktopVideo: path });
     }
-    setUploading(null);
+
+    setUploading(false);
     e.target.value = "";
   };
 
-  const removeVideo = async (field: "desktopVideo" | "mobileVideo") => {
-    if (isManagedUploadPath(hero[field]) && onDelete) {
-      await onDelete(hero[field]);
+  const removeVideo = async () => {
+    if (isManagedUploadPath(media.desktopVideo) && onDelete) {
+      await onDelete(media.desktopVideo);
     }
-    setHero({ ...hero, [field]: "" });
+    setMedia({ ...media, desktopVideo: "" });
   };
 
   return (
-    <div style={S.sectionWrap}>
-      <p style={S.hint}>
-        Upload MP4, WEBM, MOV, AVI, or OGG videos (max {formatMaxVideoSize(MAX_ADMIN_VIDEO_BYTES)}). Limit: 1 video per slot.
-      </p>
+    <div style={styles.sectionWrap}>
+      <div style={styles.card}>
+        <h3 style={styles.cardTitle}>Desktop & Mobile Hero Video</h3>
+        <p style={styles.hint}>
+          Upload MP4, WEBM, MOV, AVI, or OGG video (max {formatMaxVideoSize(MAX_ADMIN_VIDEO_BYTES)}). Save Hero Media after upload.
+        </p>
 
-      {(["desktopVideo", "mobileVideo"] as const).map((field) => (
-        <div key={field} style={S.card}>
-          <h3 style={S.cardTitle}>{field === "desktopVideo" ? "Desktop Video" : "Mobile Video"}</h3>
-          {hero[field] ? (
-            <div style={S.mediaPreview}>
-              <video src={hero[field]} style={S.previewVideo} controls muted />
-              <div style={S.mediaActions}>
-                <span style={S.mediaPath}>{hero[field]}</span>
-                <button style={S.removeBtn} onClick={() => removeVideo(field)}>Remove</button>
-              </div>
+        {media.desktopVideo ? (
+          <div style={styles.mediaPreview}>
+            <video src={media.desktopVideo} style={styles.previewVideo} controls muted />
+            <div style={styles.mediaActions}>
+              <span style={styles.mediaPath}>{media.desktopVideo}</span>
+              <button style={styles.removeBtn} onClick={removeVideo}>Remove Video</button>
             </div>
-          ) : (
-            <p style={S.noMedia}>No video set</p>
-          )}
-          <label style={S.uploadLabel}>
-            {uploading === field ? "Uploading..." : "Upload Video"}
-            <input type="file" accept={VIDEO_FILE_ACCEPT} onChange={(e) => handleVideoUpload(e, field)} style={S.fileInput} disabled={!!uploading} />
-          </label>
-        </div>
-      ))}
+          </div>
+        ) : (
+          <p style={styles.noMedia}>No video set</p>
+        )}
 
-      <button style={S.saveBtn} onClick={() => onSave({ heroMedia: hero })}>Save Hero Media</button>
+        <label style={styles.uploadLabel}>
+          {uploading ? "Uploading..." : "Upload Video"}
+          <input
+            type="file"
+            accept={VIDEO_FILE_ACCEPT}
+            onChange={handleVideoUpload}
+            style={styles.fileInput}
+            disabled={uploading}
+          />
+        </label>
+      </div>
+
+      <button style={styles.saveBtn} onClick={() => onSave({ heroMedia: media })}>Save Hero Media</button>
     </div>
   );
 }
 
-// ── FOUNDERS ──────────────────────────────────────────
-function FoundersSection({ content, onSave, onUpload, onDelete }: SectionProps) {
+// ── FOUNDERS ───────────────────────────────────────────
+function FoundersSection({ content, onSave, onUpload, onDelete, styles }: SectionProps) {
   const [section, setSection] = useState(content.foundersSection);
   const [founders, setFounders] = useState(content.founders);
   const [uploading, setUploading] = useState<number | null>(null);
 
-  const update = (i: number, key: string, val: string) => {
+  const updateFounder = (i: number, key: string, val: string) => {
     const f = [...founders];
     f[i] = { ...f[i], [key]: val };
     setFounders(f);
@@ -393,60 +545,61 @@ function FoundersSection({ content, onSave, onUpload, onDelete }: SectionProps) 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, i: number) => {
     const file = e.target.files?.[0];
     if (!file || !onUpload) return;
+
     setUploading(i);
     const path = await onUpload(file, "image");
+
     if (path) {
       if (isManagedUploadPath(founders[i].image) && onDelete) {
         await onDelete(founders[i].image);
       }
-      update(i, "image", path);
+      updateFounder(i, "image", path);
     }
+
     setUploading(null);
     e.target.value = "";
   };
 
   return (
-    <div style={S.sectionWrap}>
-      <div style={S.subGroup}>
-        <h3 style={S.subTitle}>Section Header</h3>
-        <Field label="Label" value={section.label} onChange={(v) => setSection({ ...section, label: v })} />
-        <Field label="Title" value={section.title} onChange={(v) => setSection({ ...section, title: v })} />
-        <Field label="Title Accent" value={section.titleAccent} onChange={(v) => setSection({ ...section, titleAccent: v })} />
-        <Field label="Slider Speed (seconds)" value={String(section.sliderSpeed ?? 20)} onChange={(v) => setSection({ ...section, sliderSpeed: Number(v) || 20 })} />
+    <div style={styles.sectionWrap}>
+      <div style={styles.subGroup}>
+        <h3 style={styles.subTitle}>Section Header</h3>
+        <Field label="Label" value={section.label} onChange={(v) => setSection({ ...section, label: v })} styles={styles} />
+        <Field label="Title" value={section.title} onChange={(v) => setSection({ ...section, title: v })} styles={styles} />
+        <Field label="Title Accent" value={section.titleAccent} onChange={(v) => setSection({ ...section, titleAccent: v })} styles={styles} />
+        <Field label="Slider Speed (seconds)" value={String(section.sliderSpeed ?? 20)} onChange={(v) => setSection({ ...section, sliderSpeed: Number(v) || 20 })} styles={styles} />
       </div>
 
-      <h3 style={S.subTitle}>Founders</h3>
-      <p style={S.hint}>JPEG images only. 1 image per founder.</p>
-
-      {founders.map((founder, i) => (
-        <div key={i} style={S.card}>
-          <div style={S.cardHeader}>
-            <h4 style={S.cardTitle}>Founder #{i + 1}</h4>
-            <button style={S.removeBtn} onClick={() => setFounders(founders.filter((_, j) => j !== i))}>Remove</button>
+      <h3 style={styles.subTitle}>Founders</h3>
+      {founders.map((f, i) => (
+        <div key={i} style={styles.card}>
+          <div style={styles.cardHeader}>
+            <h4 style={styles.cardTitle}>{f.name || `Founder #${i + 1}`}</h4>
+            <button style={styles.removeBtn} onClick={() => setFounders(founders.filter((_, j) => j !== i))}>Remove</button>
           </div>
-          <Field label="Name" value={founder.name} onChange={(v) => update(i, "name", v)} />
-          <Field label="Role" value={founder.role} onChange={(v) => update(i, "role", v)} />
-          {founder.image && (
-            <div style={S.mediaPreview}>
-              <img src={founder.image} alt={founder.name} style={S.previewImg} />
-              <span style={S.mediaPath}>{founder.image}</span>
+          <Field label="Name" value={f.name} onChange={(v) => updateFounder(i, "name", v)} styles={styles} />
+          <Field label="Role" value={f.role} onChange={(v) => updateFounder(i, "role", v)} styles={styles} />
+
+          {f.image && (
+            <div style={styles.mediaPreview}>
+              <img src={f.image} alt={f.name} style={styles.previewImg} />
+              <span style={styles.mediaPath}>{f.image}</span>
             </div>
           )}
-          <label style={S.uploadLabel}>
-            {uploading === i ? "Uploading..." : "Upload JPEG"}
-            <input type="file" accept="image/jpeg" onChange={(e) => handleImageUpload(e, i)} style={S.fileInput} disabled={uploading !== null} />
+          <label style={styles.uploadLabel}>
+            {uploading === i ? "Uploading..." : "Upload Image"}
+            <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, i)} style={styles.fileInput} disabled={uploading !== null} />
           </label>
         </div>
       ))}
-
-      <button style={S.addBtn} onClick={() => setFounders([...founders, { name: "", role: "", image: "" }])}>+ Add Founder</button>
-      <button style={S.saveBtn} onClick={() => onSave({ foundersSection: section, founders })}>Save Founders</button>
+      <button style={styles.addBtn} onClick={() => setFounders([...founders, { name: "", role: "", image: "" }])}>+ Add Founder</button>
+      <button style={styles.saveBtn} onClick={() => onSave({ foundersSection: section, founders })}>Save Founders</button>
     </div>
   );
 }
 
 // ── SERVICES ──────────────────────────────────────────
-function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) {
+function ServicesSection({ content, onSave, onUpload, onDelete, styles }: SectionProps) {
   const [section, setSection] = useState(content.servicesSection);
   const [services, setServices] = useState(content.services);
   const [uploading, setUploading] = useState<number | null>(null);
@@ -507,65 +660,65 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
   };
 
   return (
-    <div style={S.sectionWrap}>
-      <div style={S.subGroup}>
-        <h3 style={S.subTitle}>Section Header</h3>
-        <Field label="Label" value={section.label} onChange={(v) => setSection({ ...section, label: v })} />
-        <Field label="Title" value={section.title} onChange={(v) => setSection({ ...section, title: v })} />
-        <Field label="Title Accent" value={section.titleAccent} onChange={(v) => setSection({ ...section, titleAccent: v })} />
+    <div style={styles.sectionWrap}>
+      <div style={styles.subGroup}>
+        <h3 style={styles.subTitle}>Section Header</h3>
+        <Field label="Label" value={section.label} onChange={(v) => setSection({ ...section, label: v })} styles={styles} />
+        <Field label="Title" value={section.title} onChange={(v) => setSection({ ...section, title: v })} styles={styles} />
+        <Field label="Title Accent" value={section.titleAccent} onChange={(v) => setSection({ ...section, titleAccent: v })} styles={styles} />
       </div>
 
-      <h3 style={S.subTitle}>Services</h3>
-      <p style={S.hint}>Manage Video (MP4), Service Name, Description, Details, and Includes bullet points for each service card.</p>
+      <h3 style={styles.subTitle}>Services</h3>
+      <p style={styles.hint}>Manage Video (MP4), Service Name, Description, Details, and Includes bullet points for each service card.</p>
       {services.map((service, i) => {
         const videoSrc = service.video || service.image;
         const includesList = Array.isArray(service.includes) ? service.includes : [];
         return (
-          <div key={i} style={S.card}>
-            <div style={S.cardHeader}>
-              <div style={S.cardTitleField}>
-                <label style={S.fieldLabel}>Service Name</label>
+          <div key={i} style={styles.card}>
+            <div style={styles.cardHeader}>
+              <div style={styles.cardTitleField}>
+                <label style={styles.fieldLabel}>Service Name</label>
                 <input
-                  style={S.fieldInput}
+                  style={styles.fieldInput}
                   value={service.title}
                   placeholder="Type service name"
                   onChange={(e) => updateService(i, "title", e.target.value)}
                 />
               </div>
-              <button style={S.removeBtn} onClick={() => setServices(services.filter((_, j) => j !== i))}>Remove</button>
+              <button style={styles.removeBtn} onClick={() => setServices(services.filter((_, j) => j !== i))}>Remove</button>
             </div>
 
-            <FieldTextarea label="Description" value={service.description || ""} onChange={(v) => updateService(i, "description", v)} />
-            <Field label="Details (e.g. TEAM | COORDINATION)" value={service.details || ""} onChange={(v) => updateService(i, "details", v)} />
+            <FieldTextarea label="Description" value={service.description || ""} onChange={(v) => updateService(i, "description", v)} styles={styles} />
+            <Field label="Details (e.g. TEAM | COORDINATION)" value={service.details || ""} onChange={(v) => updateService(i, "details", v)} styles={styles} />
 
             {videoSrc ? (
-              <div style={S.mediaPreview}>
-                <video src={videoSrc} style={S.previewVideo} controls muted />
-                <div style={S.mediaActions}>
-                  <span style={S.mediaPath}>{videoSrc}</span>
-                  <button style={S.removeBtn} onClick={() => removeServiceVideo(i)}>Remove Video</button>
+              <div style={styles.mediaPreview}>
+                <video src={videoSrc} style={styles.previewVideo} controls muted />
+                <div style={styles.mediaActions}>
+                  <span style={styles.mediaPath}>{videoSrc}</span>
+                  <button style={styles.removeBtn} onClick={() => removeServiceVideo(i)}>Remove Video</button>
                 </div>
               </div>
             ) : (
-              <p style={S.noMedia}>No video set for this service.</p>
+              <p style={styles.noMedia}>No video set for this service.</p>
             )}
-            <label style={S.uploadLabel}>
+            <label style={styles.uploadLabel}>
               {uploading === i ? "Uploading..." : "Upload Video (MP4)"}
               <input
                 type="file"
                 accept="video/mp4,video/webm,video/quicktime"
                 onChange={(e) => handleVideoUpload(e, i)}
-                style={S.fileInput}
+                style={styles.fileInput}
                 disabled={uploading !== null}
               />
             </label>
 
             <div style={{ marginTop: "1.2rem" }}>
-              <h5 style={{ ...S.subTitle, fontSize: "0.75rem", marginBottom: "0.5rem" }}>Includes (Bullet Points)</h5>
+              <h5 style={{ ...styles.subTitle, fontSize: "0.75rem", marginBottom: "0.5rem" }}>Includes (Bullet Points)</h5>
               {includesList.map((item, j) => (
-                <div key={j} style={{ ...S.row, marginBottom: "0.5rem" }}>
+                <div key={j} style={{ ...styles.row, marginBottom: "0.5rem" }}>
                   <input
-                    style={S.inputFlex}
+                    style={styles.inputFlex}
                     value={item}
                     placeholder="Bullet point text"
                     onChange={(e) => {
@@ -575,7 +728,7 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
                     }}
                   />
                   <button
-                    style={S.removeBtn}
+                    style={styles.removeBtn}
                     onClick={() => {
                       const updatedIncludes = includesList.filter((_, k) => k !== j);
                       updateService(i, "includes", updatedIncludes);
@@ -585,7 +738,7 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
                   </button>
                 </div>
               ))}
-              <button style={S.addBtnSmall} onClick={() => updateService(i, "includes", [...includesList, ""])}>
+              <button style={styles.addBtnSmall} onClick={() => updateService(i, "includes", [...includesList, ""])}>
                 + Add Bullet Point
               </button>
             </div>
@@ -593,14 +746,14 @@ function ServicesSection({ content, onSave, onUpload, onDelete }: SectionProps) 
         );
       })}
 
-      <button style={S.addBtn} onClick={addService}>+ Add Service</button>
-      <button style={S.saveBtn} onClick={saveServices}>Save Services</button>
+      <button style={styles.addBtn} onClick={addService}>+ Add Service</button>
+      <button style={styles.saveBtn} onClick={saveServices}>Save Services</button>
     </div>
   );
 }
 
 // ── MODELS ────────────────────────────────────────────
-function ModelsSection({ content, onSave, onUpload, onDelete }: SectionProps) {
+function ModelsSection({ content, onSave, onUpload, onDelete, styles }: SectionProps) {
   const [section, setSection] = useState(content.modelsSection);
   const [models, setModels] = useState(content.models);
   const [uploading, setUploading] = useState<number | null>(null);
@@ -627,50 +780,50 @@ function ModelsSection({ content, onSave, onUpload, onDelete }: SectionProps) {
   };
 
   return (
-    <div style={S.sectionWrap}>
-      <div style={S.subGroup}>
-        <h3 style={S.subTitle}>Section Header</h3>
-        <Field label="Label" value={section.label} onChange={(v) => setSection({ ...section, label: v })} />
-        <Field label="Title" value={section.title} onChange={(v) => setSection({ ...section, title: v })} />
-        <Field label="Title Accent" value={section.titleAccent} onChange={(v) => setSection({ ...section, titleAccent: v })} />
-        <Field label="Slider Speed (seconds)" value={String(section.sliderSpeed ?? 25)} onChange={(v) => setSection({ ...section, sliderSpeed: Number(v) || 25 })} />
+    <div style={styles.sectionWrap}>
+      <div style={styles.subGroup}>
+        <h3 style={styles.subTitle}>Section Header</h3>
+        <Field label="Label" value={section.label} onChange={(v) => setSection({ ...section, label: v })} styles={styles} />
+        <Field label="Title" value={section.title} onChange={(v) => setSection({ ...section, title: v })} styles={styles} />
+        <Field label="Title Accent" value={section.titleAccent} onChange={(v) => setSection({ ...section, titleAccent: v })} styles={styles} />
+        <Field label="Slider Speed (seconds)" value={String(section.sliderSpeed ?? 25)} onChange={(v) => setSection({ ...section, sliderSpeed: Number(v) || 25 })} styles={styles} />
       </div>
 
-      <h3 style={S.subTitle}>Models</h3>
-      <p style={S.hint}>JPEG images only. 1 image per model.</p>
+      <h3 style={styles.subTitle}>Models</h3>
+      <p style={styles.hint}>JPEG images only. 1 image per model.</p>
 
       {models.map((model, i) => (
-        <div key={i} style={S.card}>
-          <div style={S.cardHeader}>
-            <h4 style={S.cardTitle}>{model.name || `Model #${i + 1}`}</h4>
-            <button style={S.removeBtn} onClick={() => setModels(models.filter((_, j) => j !== i))}>Remove</button>
+        <div key={i} style={styles.card}>
+          <div style={styles.cardHeader}>
+            <h4 style={styles.cardTitle}>{model.name || `Model #${i + 1}`}</h4>
+            <button style={styles.removeBtn} onClick={() => setModels(models.filter((_, j) => j !== i))}>Remove</button>
           </div>
-          <Field label="Name" value={model.name} onChange={(v) => updateModel(i, "name", v)} />
-          <Field label="Height" value={model.height} onChange={(v) => updateModel(i, "height", v)} />
-          <Field label="Hair" value={model.hair} onChange={(v) => updateModel(i, "hair", v)} />
-          <Field label="Eyes" value={model.eyes} onChange={(v) => updateModel(i, "eyes", v)} />
+          <Field label="Name (Required)" value={model.name} onChange={(v) => updateModel(i, "name", v)} styles={styles} />
+          <Field label="Height (Optional)" value={model.height || ""} onChange={(v) => updateModel(i, "height", v)} styles={styles} />
+          <Field label="Hair (Optional)" value={model.hair || ""} onChange={(v) => updateModel(i, "hair", v)} styles={styles} />
+          <Field label="Eyes (Optional)" value={model.eyes || ""} onChange={(v) => updateModel(i, "eyes", v)} styles={styles} />
 
           {model.image && (
-            <div style={S.mediaPreview}>
-              <img src={model.image} alt={model.name} style={S.previewImg} />
-              <span style={S.mediaPath}>{model.image}</span>
+            <div style={styles.mediaPreview}>
+              <img src={model.image} alt={model.name} style={styles.previewImg} />
+              <span style={styles.mediaPath}>{model.image}</span>
             </div>
           )}
-          <label style={S.uploadLabel}>
+          <label style={styles.uploadLabel}>
             {uploading === i ? "Uploading..." : "Upload JPEG"}
-            <input type="file" accept="image/jpeg" onChange={(e) => handleImageUpload(e, i)} style={S.fileInput} disabled={uploading !== null} />
+            <input type="file" accept="image/jpeg" onChange={(e) => handleImageUpload(e, i)} style={styles.fileInput} disabled={uploading !== null} />
           </label>
         </div>
       ))}
 
-      <button style={S.addBtn} onClick={() => setModels([...models, { id: Date.now(), name: "", height: "", hair: "", eyes: "", image: "" }])}>+ Add Model</button>
-      <button style={S.saveBtn} onClick={() => onSave({ modelsSection: section, models })}>Save Models</button>
+      <button style={styles.addBtn} onClick={() => setModels([...models, { id: Date.now(), name: "", height: "", hair: "", eyes: "", image: "" }])}>+ Add Model</button>
+      <button style={styles.saveBtn} onClick={() => onSave({ modelsSection: section, models })}>Save Models</button>
     </div>
   );
 }
 
-// ── CONTACT ───────────────────────────────────────────
-function ContactSection({ showToast }: { showToast: (msg: string, type?: "ok" | "err") => void }) {
+// ── CONTACT & MODEL SUBMISSIONS ─────────────────────────
+function ContactSection({ showToast, styles }: { showToast: (msg: string, type?: "ok" | "err") => void; styles: AdminStyles }) {
   const [submissions, setSubmissions] = useState<ModelSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -682,8 +835,8 @@ function ContactSection({ showToast }: { showToast: (msg: string, type?: "ok" | 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load submissions");
       setSubmissions(data.submissions || []);
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Failed to load submissions", "err");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to load model applications", "err");
     } finally {
       setLoading(false);
     }
@@ -693,111 +846,103 @@ function ContactSection({ showToast }: { showToast: (msg: string, type?: "ok" | 
     loadSubmissions();
   }, [loadSubmissions]);
 
-  const deleteSubmission = async (id?: string) => {
-    if (!id) return;
-
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this submission?")) return;
     setDeletingId(id);
     try {
-      const res = await fetch("/api/model-submissions", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Delete failed");
-      setSubmissions((prev) => prev.filter((submission) => submission._id !== id));
+      const res = await fetch(`/api/model-submissions?id=${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
+      setSubmissions((prev) => prev.filter((item) => item._id !== id));
       showToast("Submission deleted");
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Delete failed", "err");
+    } catch {
+      showToast("Failed to delete submission", "err");
     } finally {
       setDeletingId(null);
     }
   };
 
+  if (loading) return <p style={{ color: styles.textMuted }}>Loading applications...</p>;
+
   return (
-    <div style={S.sectionWrap}>
-      <div style={S.cardHeader}>
-        <p style={S.hint}>
-          Model form submissions from the website. Deleting a card also deletes its uploaded images and video.
-        </p>
-        <button style={S.addBtnSmall} onClick={loadSubmissions} disabled={loading}>
-          Refresh
-        </button>
+    <div style={styles.sectionWrap}>
+      <div style={styles.subGroup}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <h3 style={styles.subTitle}>Model Applications</h3>
+            <p style={styles.hint}>Public submissions sent via the model form</p>
+          </div>
+          <button style={styles.addBtnSmall} onClick={loadSubmissions}>Refresh</button>
+        </div>
+
+        {submissions.length === 0 ? (
+          <p style={styles.noMedia}>No model applications received yet.</p>
+        ) : (
+          submissions.map((sub) => (
+            <div key={sub._id} style={styles.card}>
+              <div style={styles.cardHeader}>
+                <h4 style={styles.cardTitle}>{sub.fullname}</h4>
+                <button
+                  style={styles.removeBtn}
+                  onClick={() => handleDelete(sub._id)}
+                  disabled={deletingId === sub._id}
+                >
+                  {deletingId === sub._id ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+
+              <div style={styles.submissionMetaGrid}>
+                <div style={styles.submissionMetaItem}>
+                  <span style={styles.fieldLabel}>EMAIL</span>
+                  <span style={styles.submissionMetaValue}>{sub.email}</span>
+                </div>
+                <div style={styles.submissionMetaItem}>
+                  <span style={styles.fieldLabel}>CONTACT</span>
+                  <span style={styles.submissionMetaValue}>{sub.contact}</span>
+                </div>
+                <div style={styles.submissionMetaItem}>
+                  <span style={styles.fieldLabel}>AGE</span>
+                  <span style={styles.submissionMetaValue}>{sub.age}</span>
+                </div>
+                <div style={styles.submissionMetaItem}>
+                  <span style={styles.fieldLabel}>HEIGHT</span>
+                  <span style={styles.submissionMetaValue}>{sub.height}</span>
+                </div>
+                <div style={styles.submissionMetaItem}>
+                  <span style={styles.fieldLabel}>CITY</span>
+                  <span style={styles.submissionMetaValue}>{sub.city}</span>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.5rem" }}>
+                <span style={styles.fieldLabel}>SUBMITTED IMAGES ({sub.images?.length || 0})</span>
+                <div style={styles.submissionImageGrid}>
+                  {sub.images?.map((img, i) => (
+                    <a key={i} href={img} target="_blank" rel="noreferrer" style={styles.submissionMediaLink}>
+                      <img src={img} alt={`Submission photo ${i + 1}`} style={styles.submissionImg} />
+                    </a>
+                  ))}
+                </div>
+              </div>
+
+              {sub.video && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.5rem" }}>
+                  <span style={styles.fieldLabel}>SUBMITTED VIDEO</span>
+                  <video src={sub.video} controls style={{ width: "100%", maxWidth: "360px", borderRadius: "8px" }} />
+                  <a href={sub.video} target="_blank" rel="noreferrer" style={{ fontSize: "0.75rem", color: "#C9A84C" }}>
+                    Open Video in New Tab ↗
+                  </a>
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
-
-      {loading ? <p style={S.noMedia}>Loading submissions...</p> : null}
-
-      {!loading && submissions.length === 0 ? (
-        <div style={S.card}>
-          <h3 style={S.cardTitle}>No submissions yet</h3>
-          <p style={S.noMedia}>New model applications will appear here after users submit the form.</p>
-        </div>
-      ) : null}
-
-      {submissions.map((submission) => (
-        <div key={submission._id} style={S.card}>
-          <div style={S.cardHeader}>
-            <div>
-              <h3 style={S.cardTitle}>{submission.fullname}</h3>
-              <p style={{ ...S.noMedia, margin: "0.35rem 0 0" }}>
-                {new Date(submission.createdAt).toLocaleString()}
-              </p>
-            </div>
-            <button
-              style={S.removeBtn}
-              onClick={() => deleteSubmission(submission._id)}
-              disabled={deletingId === submission._id}
-            >
-              {deletingId === submission._id ? "Deleting..." : "Delete"}
-            </button>
-          </div>
-
-          <div style={S.submissionMetaGrid}>
-            <SubmissionMeta label="Email" value={submission.email} />
-            <SubmissionMeta label="Contact" value={submission.contact} />
-            <SubmissionMeta label="Age" value={submission.age} />
-            <SubmissionMeta label="Height" value={submission.height} />
-            <SubmissionMeta label="City" value={submission.city} />
-          </div>
-
-          <div style={S.subGroup}>
-            <h4 style={S.subTitle}>Images</h4>
-            <div style={S.submissionImageGrid}>
-              {submission.images.map((imagePath) => (
-                <a key={imagePath} href={imagePath} target="_blank" rel="noreferrer" style={S.submissionMediaLink}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={imagePath} alt={submission.fullname} style={S.submissionImg} />
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {submission.video ? (
-            <div style={S.subGroup}>
-              <h4 style={S.subTitle}>Video</h4>
-              <video src={submission.video} style={S.previewVideo} controls />
-              <a href={submission.video} target="_blank" rel="noreferrer" style={S.mediaPath}>
-                {submission.video}
-              </a>
-            </div>
-          ) : null}
-        </div>
-      ))}
     </div>
   );
 }
 
 // ── FOOTER ────────────────────────────────────────────
-function SubmissionMeta({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={S.submissionMetaItem}>
-      <span style={S.fieldLabel}>{label}</span>
-      <strong style={S.submissionMetaValue}>{value}</strong>
-    </div>
-  );
-}
-
-function FooterSection({ content, onSave, onUpload, onDelete }: SectionProps) {
+function FooterSection({ content, onSave, onUpload, onDelete, styles }: SectionProps) {
   const [footer, setFooter] = useState(content.footer);
   const [uploading, setUploading] = useState(false);
 
@@ -828,52 +973,52 @@ function FooterSection({ content, onSave, onUpload, onDelete }: SectionProps) {
   };
 
   return (
-    <div style={S.sectionWrap}>
-      <div style={S.card}>
-        <h3 style={S.cardTitle}>CTA Video</h3>
-        <p style={S.hint}>
-          Upload MP4, WEBM, MOV, AVI, or OGG video (max {formatMaxVideoSize(MAX_ADMIN_VIDEO_BYTES)}). Save Footer after upload to show it on the website.
+    <div style={styles.sectionWrap}>
+      <div style={styles.card}>
+        <h3 style={styles.cardTitle}>CTA Video</h3>
+        <p style={styles.hint}>
+          Upload MP4, WEBM, MOV, AVI, or OGG video (max {formatMaxVideoSize(MAX_ADMIN_VIDEO_BYTES)}). Save Footer after upload.
         </p>
         {footer.ctaVideoSrc ? (
-          <div style={S.mediaPreview}>
-            <video src={footer.ctaVideoSrc} style={S.previewVideo} controls muted />
-            <div style={S.mediaActions}>
-              <span style={S.mediaPath}>{footer.ctaVideoSrc}</span>
-              <button style={S.removeBtn} onClick={removeCtaVideo}>Remove</button>
+          <div style={styles.mediaPreview}>
+            <video src={footer.ctaVideoSrc} style={styles.previewVideo} controls muted />
+            <div style={styles.mediaActions}>
+              <span style={styles.mediaPath}>{footer.ctaVideoSrc}</span>
+              <button style={styles.removeBtn} onClick={removeCtaVideo}>Remove</button>
             </div>
           </div>
         ) : (
-          <p style={S.noMedia}>No CTA video set</p>
+          <p style={styles.noMedia}>No CTA video set</p>
         )}
-        <label style={S.uploadLabel}>
+        <label style={styles.uploadLabel}>
           {uploading ? "Uploading..." : "Upload Video"}
-          <input type="file" accept={VIDEO_FILE_ACCEPT} onChange={handleCtaVideoUpload} style={S.fileInput} disabled={uploading} />
+          <input type="file" accept={VIDEO_FILE_ACCEPT} onChange={handleCtaVideoUpload} style={styles.fileInput} disabled={uploading} />
         </label>
       </div>
-      <FieldTextarea label="CTA Headline" value={footer.ctaHeadline} onChange={(v) => setFooter({ ...footer, ctaHeadline: v })} />
-      <FieldTextarea label="Description" value={footer.description} onChange={(v) => setFooter({ ...footer, description: v })} />
 
-      <div style={S.subGroup}>
-        <h3 style={S.subTitle}>Heading Lines</h3>
+      <FieldTextarea label="Description" value={footer.description} onChange={(v) => setFooter({ ...footer, description: v })} styles={styles} />
+
+      <div style={styles.subGroup}>
+        <h3 style={styles.subTitle}>Heading Lines</h3>
         {footer.heading.map((line, i) => (
           <Field key={i} label={`Line ${i + 1}`} value={line} onChange={(v) => {
             const h = [...footer.heading];
             h[i] = v;
             setFooter({ ...footer, heading: h });
-          }} />
+          }} styles={styles} />
         ))}
       </div>
 
-      <div style={S.subGroup}>
-        <h3 style={S.subTitle}>Team</h3>
-        <Field label="Team Title" value={footer.team.title} onChange={(v) => setFooter({ ...footer, team: { ...footer.team, title: v } })} />
-        <Field label="Marketing" value={footer.team.marketing} onChange={(v) => setFooter({ ...footer, team: { ...footer.team, marketing: v } })} />
+      <div style={styles.subGroup}>
+        <h3 style={styles.subTitle}>Team</h3>
+        <Field label="Team Title" value={footer.team.title} onChange={(v) => setFooter({ ...footer, team: { ...footer.team, title: v } })} styles={styles} />
+        <Field label="Marketing" value={footer.team.marketing} onChange={(v) => setFooter({ ...footer, team: { ...footer.team, marketing: v } })} styles={styles} />
 
-        <h4 style={{ ...S.subTitle, fontSize: "0.7rem", marginTop: "1rem" }}>Members</h4>
+        <h4 style={{ ...styles.subTitle, fontSize: "0.7rem", marginTop: "1rem" }}>Members</h4>
         {footer.team.members.map((m, i) => (
-          <div key={i} style={S.row}>
+          <div key={i} style={styles.row}>
             <input
-              style={S.inputFlex}
+              style={styles.inputFlex}
               value={m.name}
               placeholder="Name"
               onChange={(e) => {
@@ -883,7 +1028,7 @@ function FooterSection({ content, onSave, onUpload, onDelete }: SectionProps) {
               }}
             />
             <input
-              style={S.inputFlex}
+              style={styles.inputFlex}
               value={m.role}
               placeholder="Role"
               onChange={(e) => {
@@ -892,23 +1037,23 @@ function FooterSection({ content, onSave, onUpload, onDelete }: SectionProps) {
                 setFooter({ ...footer, team: { ...footer.team, members } });
               }}
             />
-            <button style={S.removeBtn} onClick={() => {
+            <button style={styles.removeBtn} onClick={() => {
               const members = footer.team.members.filter((_, j) => j !== i);
               setFooter({ ...footer, team: { ...footer.team, members } });
             }}>✕</button>
           </div>
         ))}
-        <button style={S.addBtnSmall} onClick={() => {
+        <button style={styles.addBtnSmall} onClick={() => {
           setFooter({ ...footer, team: { ...footer.team, members: [...footer.team.members, { name: "", role: "" }] } });
         }}>+ Add Member</button>
       </div>
 
-      <div style={S.subGroup}>
-        <h3 style={S.subTitle}>Studio Locations</h3>
+      <div style={styles.subGroup}>
+        <h3 style={styles.subTitle}>Studio Locations</h3>
         {footer.studioLocations.map((loc, i) => (
-          <div key={i} style={S.row}>
+          <div key={i} style={styles.row}>
             <input
-              style={S.inputFlex}
+              style={styles.inputFlex}
               value={loc.city}
               placeholder="City"
               onChange={(e) => {
@@ -918,7 +1063,7 @@ function FooterSection({ content, onSave, onUpload, onDelete }: SectionProps) {
               }}
             />
             <input
-              style={S.inputFlex}
+              style={styles.inputFlex}
               value={loc.note}
               placeholder="Note"
               onChange={(e) => {
@@ -927,25 +1072,25 @@ function FooterSection({ content, onSave, onUpload, onDelete }: SectionProps) {
                 setFooter({ ...footer, studioLocations: locs });
               }}
             />
-            <button style={S.removeBtn} onClick={() => {
+            <button style={styles.removeBtn} onClick={() => {
               setFooter({ ...footer, studioLocations: footer.studioLocations.filter((_, j) => j !== i) });
             }}>✕</button>
           </div>
         ))}
-        <button style={S.addBtnSmall} onClick={() => {
+        <button style={styles.addBtnSmall} onClick={() => {
           setFooter({ ...footer, studioLocations: [...footer.studioLocations, { city: "", note: "" }] });
         }}>+ Add Location</button>
       </div>
 
-      <div style={S.subGroup}>
-        <h3 style={S.subTitle}>CTA Headline Overlay Text</h3>
-        <p style={S.hint}>
-          Text displayed over the footer CTA video (e.g. &quot;Build visuals that look premium before production even starts.&quot;). Leave empty if you don&apos;t want to show any headline text over the footer video.
+      <div style={styles.subGroup}>
+        <h3 style={styles.subTitle}>CTA Headline Overlay Text</h3>
+        <p style={styles.hint}>
+          Text displayed over the footer CTA video (e.g. &quot;Build visuals that look premium before production even starts.&quot;). Leave empty to hide.
         </p>
-        <FieldTextarea label="CTA Headline" value={footer.ctaHeadline || ""} onChange={(v) => setFooter({ ...footer, ctaHeadline: v })} />
+        <FieldTextarea label="CTA Headline" value={footer.ctaHeadline || ""} onChange={(v) => setFooter({ ...footer, ctaHeadline: v })} styles={styles} />
       </div>
 
-      <button style={S.saveBtn} onClick={() => onSave({ footer })}>Save Footer</button>
+      <button style={styles.saveBtn} onClick={() => onSave({ footer })}>Save Footer</button>
     </div>
   );
 }
@@ -954,392 +1099,426 @@ function FooterSection({ content, onSave, onUpload, onDelete }: SectionProps) {
 // Reusable Form Controls
 // ─────────────────────────────────────────────────────────
 
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function Field({ label, value, onChange, styles }: { label: string; value: string; onChange: (v: string) => void; styles: AdminStyles }) {
   return (
-    <div style={S.fieldWrap}>
-      <label style={S.fieldLabel}>{label}</label>
-      <input style={S.fieldInput} value={value} onChange={(e) => onChange(e.target.value)} />
+    <div style={styles.fieldWrap}>
+      <label style={styles.fieldLabel}>{label}</label>
+      <input style={styles.fieldInput} value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
   );
 }
 
-function FieldTextarea({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function FieldTextarea({ label, value, onChange, styles }: { label: string; value: string; onChange: (v: string) => void; styles: AdminStyles }) {
   return (
-    <div style={S.fieldWrap}>
-      <label style={S.fieldLabel}>{label}</label>
-      <textarea style={{ ...S.fieldInput, minHeight: "80px", resize: "vertical" as const }} value={value} onChange={(e) => onChange(e.target.value)} />
+    <div style={styles.fieldWrap}>
+      <label style={styles.fieldLabel}>{label}</label>
+      <textarea style={{ ...styles.fieldInput, minHeight: "80px", resize: "vertical" as const }} value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────
-// Styles
+// Dynamic Theme Styles Definition
 // ─────────────────────────────────────────────────────────
 
-const S: Record<string, React.CSSProperties> = {
-  layout: {
-    display: "flex",
-    minHeight: "100vh",
-    fontFamily: "'Inter', -apple-system, sans-serif",
-  },
-  sidebar: {
-    width: "240px",
-    background: "rgba(255,255,255,0.02)",
-    borderRight: "1px solid rgba(255,255,255,0.06)",
-    padding: "1.5rem",
-    display: "flex",
-    flexDirection: "column",
-    position: "sticky",
-    top: 0,
-    height: "100vh",
-    flexShrink: 0,
-  },
-  sidebarLogo: {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.75rem",
-    marginBottom: "2rem",
-    paddingBottom: "1.5rem",
-    borderBottom: "1px solid rgba(255,255,255,0.06)",
-  },
-  logoMark: {
-    width: "36px",
-    height: "36px",
-    borderRadius: "8px",
-    background: "linear-gradient(135deg, #C9A84C, #8B6914)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#0A0A0A",
-    fontWeight: 800,
-    fontSize: "0.75rem",
-  },
-  logoText: {
-    color: "#fff",
-    fontWeight: 600,
-    fontSize: "0.85rem",
-    letterSpacing: "0.15em",
-  },
-  nav: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "0.25rem",
-    flex: 1,
-  },
-  navBtn: {
-    background: "transparent",
-    border: "none",
-    color: "rgba(255,255,255,0.5)",
-    padding: "0.65rem 0.75rem",
-    borderRadius: "8px",
-    textAlign: "left" as const,
-    cursor: "pointer",
-    fontSize: "0.82rem",
-    fontWeight: 500,
-    transition: "all 0.15s",
-  },
-  navBtnActive: {
-    background: "rgba(201,168,76,0.15)",
-    color: "#C9A84C",
-  },
-  logoutBtn: {
-    background: "transparent",
-    border: "1px solid rgba(255,255,255,0.1)",
-    color: "rgba(255,255,255,0.4)",
-    padding: "0.6rem",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontSize: "0.7rem",
-    fontWeight: 600,
-    letterSpacing: "0.15em",
-    marginTop: "1rem",
-  },
-  main: {
-    flex: 1,
-    padding: "2rem 3rem",
-    overflowY: "auto" as const,
-    maxHeight: "100vh",
-  },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    gap: "1rem",
-    marginBottom: "2rem",
-    paddingBottom: "1.5rem",
-    borderBottom: "1px solid rgba(255,255,255,0.06)",
-  },
-  headerTitle: {
-    color: "#fff",
-    fontSize: "1.5rem",
-    fontWeight: 600,
-    margin: 0,
-  },
-  savingBadge: {
-    background: "rgba(201,168,76,0.2)",
-    color: "#C9A84C",
-    padding: "0.3rem 0.8rem",
-    borderRadius: "6px",
-    fontSize: "0.72rem",
-    fontWeight: 600,
-    letterSpacing: "0.1em",
-  },
-  content: {
-    maxWidth: "800px",
-  },
-  center: {
-    minHeight: "100vh",
-    display: "flex",
-    flexDirection: "column" as const,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  spinner: {
-    width: "36px",
-    height: "36px",
-    border: "3px solid rgba(255,255,255,0.1)",
-    borderTopColor: "#C9A84C",
-    borderRadius: "50%",
-    animation: "spin 0.6s linear infinite",
-  },
-  sectionWrap: {
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "1rem",
-  },
-  subGroup: {
-    background: "rgba(255,255,255,0.02)",
-    border: "1px solid rgba(255,255,255,0.06)",
-    borderRadius: "12px",
-    padding: "1.25rem",
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "0.75rem",
-  },
-  subTitle: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: "0.75rem",
-    fontWeight: 600,
-    letterSpacing: "0.12em",
-    textTransform: "uppercase" as const,
-    margin: 0,
-  },
-  card: {
-    background: "rgba(255,255,255,0.02)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: "12px",
-    padding: "1.25rem",
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "0.75rem",
-  },
-  cardHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  cardTitle: {
-    color: "#fff",
-    fontSize: "0.9rem",
-    fontWeight: 600,
-    margin: 0,
-  },
-  cardTitleField: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "0.35rem",
-  },
-  row: {
-    display: "flex",
-    gap: "0.5rem",
-    alignItems: "center",
-  },
-  inputFlex: {
-    flex: 1,
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: "8px",
-    padding: "0.55rem 0.75rem",
-    color: "#fff",
-    fontSize: "0.85rem",
-    outline: "none",
-  },
-  fieldWrap: {
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "0.35rem",
-  },
-  fieldLabel: {
-    color: "rgba(255,255,255,0.45)",
-    fontSize: "0.68rem",
-    fontWeight: 600,
-    letterSpacing: "0.1em",
-    textTransform: "uppercase" as const,
-  },
-  fieldInput: {
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: "8px",
-    padding: "0.6rem 0.75rem",
-    color: "#fff",
-    fontSize: "0.85rem",
-    outline: "none",
-    width: "100%",
-    boxSizing: "border-box" as const,
-  },
-  saveBtn: {
-    background: "linear-gradient(135deg, #C9A84C, #8B6914)",
-    color: "#0A0A0A",
-    border: "none",
-    borderRadius: "10px",
-    padding: "0.8rem 1.5rem",
-    fontSize: "0.8rem",
-    fontWeight: 700,
-    letterSpacing: "0.1em",
-    cursor: "pointer",
-    marginTop: "1rem",
-    alignSelf: "flex-start",
-  },
-  addBtn: {
-    background: "rgba(255,255,255,0.05)",
-    border: "1px dashed rgba(255,255,255,0.15)",
-    borderRadius: "10px",
-    padding: "0.7rem",
-    color: "rgba(255,255,255,0.5)",
-    fontSize: "0.82rem",
-    cursor: "pointer",
-    textAlign: "center" as const,
-  },
-  addBtnSmall: {
-    background: "transparent",
-    border: "none",
-    color: "#C9A84C",
-    fontSize: "0.75rem",
-    cursor: "pointer",
-    padding: "0.3rem 0",
-    fontWeight: 600,
-    alignSelf: "flex-start",
-  },
-  removeBtn: {
-    background: "rgba(220,38,38,0.15)",
-    border: "1px solid rgba(220,38,38,0.2)",
-    color: "#fca5a5",
-    borderRadius: "6px",
-    padding: "0.35rem 0.6rem",
-    fontSize: "0.72rem",
-    cursor: "pointer",
-    fontWeight: 600,
-    flexShrink: 0,
-  },
-  hint: {
-    color: "rgba(255,255,255,0.35)",
-    fontSize: "0.78rem",
-    fontStyle: "italic" as const,
-    margin: 0,
-  },
-  mediaPreview: {
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "0.5rem",
-  },
-  previewImg: {
-    width: "120px",
-    height: "120px",
-    objectFit: "cover" as const,
-    borderRadius: "8px",
-    border: "1px solid rgba(255,255,255,0.1)",
-  },
-  previewVideo: {
-    width: "100%",
-    maxWidth: "320px",
-    borderRadius: "8px",
-    border: "1px solid rgba(255,255,255,0.1)",
-  },
-  submissionMetaGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-    gap: "0.75rem",
-  },
-  submissionMetaItem: {
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.06)",
-    borderRadius: "8px",
-    padding: "0.75rem",
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "0.35rem",
-  },
-  submissionMetaValue: {
-    color: "#fff",
-    fontSize: "0.86rem",
-    fontWeight: 600,
-    wordBreak: "break-word" as const,
-  },
-  submissionImageGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
-    gap: "0.75rem",
-  },
-  submissionMediaLink: {
-    display: "block",
-    borderRadius: "8px",
-    overflow: "hidden",
-    border: "1px solid rgba(255,255,255,0.1)",
-    background: "rgba(255,255,255,0.04)",
-  },
-  submissionImg: {
-    width: "100%",
-    aspectRatio: "1 / 1",
-    objectFit: "cover" as const,
-    display: "block",
-  },
-  mediaPath: {
-    color: "rgba(255,255,255,0.35)",
-    fontSize: "0.72rem",
-    wordBreak: "break-all" as const,
-  },
-  mediaStatus: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: "0.72rem",
-    fontWeight: 600,
-  },
-  mediaActions: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  noMedia: {
-    color: "rgba(255,255,255,0.3)",
-    fontSize: "0.82rem",
-    fontStyle: "italic" as const,
-  },
-  uploadLabel: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "0.5rem",
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: "8px",
-    padding: "0.5rem 1rem",
-    color: "rgba(255,255,255,0.7)",
-    fontSize: "0.78rem",
-    fontWeight: 600,
-    cursor: "pointer",
-    alignSelf: "flex-start",
-  },
-  fileInput: {
-    display: "none",
-  },
-  toast: {
-    position: "fixed" as const,
-    bottom: "2rem",
-    right: "2rem",
-    padding: "0.75rem 1.5rem",
-    borderRadius: "10px",
-    color: "#fff",
-    fontSize: "0.85rem",
-    fontWeight: 600,
-    zIndex: 9999,
-    boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-  },
-};
+type AdminStyles = Record<string, React.CSSProperties>;
+
+function getThemeStyles(theme: "dark" | "light"): AdminStyles {
+  const isDark = theme === "dark";
+
+  const bg = isDark ? "#09090b" : "#f8fafc";
+  const text = isDark ? "#fafafa" : "#0f172a";
+  const textMuted = isDark ? "#a1a1aa" : "#475569";
+  const textDim = isDark ? "#71717a" : "#94a3b8";
+  const border = isDark ? "rgba(255, 255, 255, 0.08)" : "#e2e8f0";
+  const cardBg = isDark ? "#121215" : "#ffffff";
+  const subGroupBg = isDark ? "#17171c" : "#f1f5f9";
+  const inputBg = isDark ? "#1a1a20" : "#ffffff";
+  const inputBorder = isDark ? "rgba(255, 255, 255, 0.14)" : "#cbd5e1";
+
+  return {
+    layout: {
+      display: "flex",
+      minHeight: "100vh",
+      fontFamily: "'Inter', -apple-system, sans-serif",
+    },
+    bg: { background: bg },
+    text: { color: text },
+    textMuted: { color: textMuted },
+    sidebar: {
+      width: "250px",
+      background: cardBg,
+      borderRight: `1px solid ${border}`,
+      padding: "1.5rem",
+      display: "flex",
+      flexDirection: "column",
+      position: "sticky",
+      top: 0,
+      height: "100vh",
+      flexShrink: 0,
+    },
+    sidebarLogo: {
+      display: "flex",
+      alignItems: "center",
+      gap: "0.75rem",
+      marginBottom: "1.8rem",
+      paddingBottom: "1.2rem",
+      borderBottom: `1px solid ${border}`,
+    },
+    logoMark: {
+      width: "36px",
+      height: "36px",
+      borderRadius: "8px",
+      background: "linear-gradient(135deg, #C9A84C, #8B6914)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: "#0A0A0A",
+      fontWeight: 800,
+      fontSize: "0.75rem",
+    },
+    logoText: {
+      color: text,
+      fontWeight: 700,
+      fontSize: "0.85rem",
+      letterSpacing: "0.15em",
+    },
+    nav: {
+      display: "flex",
+      flexDirection: "column",
+      gap: "0.35rem",
+      flex: 1,
+    },
+    navBtn: {
+      background: "transparent",
+      border: "none",
+      color: textMuted,
+      padding: "0.7rem 0.85rem",
+      borderRadius: "8px",
+      textAlign: "left" as const,
+      cursor: "pointer",
+      fontSize: "0.84rem",
+      fontWeight: 500,
+      transition: "all 0.15s",
+    },
+    navBtnActive: {
+      background: isDark ? "#1c1c22" : "#ffffff",
+      border: `1px solid ${isDark ? "rgba(201,168,76,0.35)" : "#cbd5e1"}`,
+      color: isDark ? "#F3E5AB" : "#8B6914",
+      fontWeight: 700,
+      boxShadow: isDark ? "0 2px 10px rgba(0,0,0,0.25)" : "0 2px 4px rgba(0,0,0,0.04)",
+    },
+    logoutBtn: {
+      background: "transparent",
+      border: `1px solid ${border}`,
+      color: textDim,
+      padding: "0.65rem",
+      borderRadius: "8px",
+      cursor: "pointer",
+      fontSize: "0.7rem",
+      fontWeight: 600,
+      letterSpacing: "0.15em",
+      marginTop: "1rem",
+    },
+    main: {
+      flex: 1,
+      padding: "2rem 3rem",
+      overflowY: "auto" as const,
+      maxHeight: "100vh",
+    },
+    header: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: "2rem",
+      paddingBottom: "1.2rem",
+      borderBottom: `1px solid ${border}`,
+    },
+    headerTitle: {
+      color: text,
+      fontSize: "1.6rem",
+      fontWeight: 700,
+      margin: 0,
+    },
+    themeBtn: {
+      background: isDark ? "#1e1e24" : "#ffffff",
+      border: `1px solid ${border}`,
+      color: text,
+      borderRadius: "20px",
+      padding: "0.45rem 1rem",
+      fontSize: "0.78rem",
+      fontWeight: 600,
+      cursor: "pointer",
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "0.4rem",
+      boxShadow: isDark ? "none" : "0 2px 5px rgba(0,0,0,0.05)",
+    },
+    savingBadge: {
+      background: "rgba(201,168,76,0.2)",
+      color: "#C9A84C",
+      padding: "0.35rem 0.85rem",
+      borderRadius: "6px",
+      fontSize: "0.72rem",
+      fontWeight: 600,
+      letterSpacing: "0.1em",
+    },
+    content: {
+      maxWidth: "850px",
+    },
+    center: {
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column" as const,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    spinner: {
+      width: "36px",
+      height: "36px",
+      border: `3px solid ${border}`,
+      borderTopColor: "#C9A84C",
+      borderRadius: "50%",
+      animation: "spin 0.6s linear infinite",
+    },
+    sectionWrap: {
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "1.2rem",
+    },
+    subGroup: {
+      background: subGroupBg,
+      border: `1px solid ${border}`,
+      borderRadius: "14px",
+      padding: "1.4rem",
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "0.85rem",
+      boxShadow: isDark ? "0 4px 15px rgba(0,0,0,0.15)" : "0 2px 8px rgba(0,0,0,0.03)",
+    },
+    subTitle: {
+      color: textMuted,
+      fontSize: "0.75rem",
+      fontWeight: 700,
+      letterSpacing: "0.12em",
+      textTransform: "uppercase" as const,
+      margin: 0,
+    },
+    card: {
+      background: cardBg,
+      border: `1px solid ${border}`,
+      borderRadius: "14px",
+      padding: "1.4rem",
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "0.85rem",
+      boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.2)" : "0 2px 10px rgba(0,0,0,0.04)",
+    },
+    cardHeader: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    cardTitle: {
+      color: text,
+      fontSize: "0.95rem",
+      fontWeight: 600,
+      margin: 0,
+    },
+    cardTitleField: {
+      flex: 1,
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "0.35rem",
+    },
+    row: {
+      display: "flex",
+      gap: "0.5rem",
+      alignItems: "center",
+    },
+    inputFlex: {
+      flex: 1,
+      background: inputBg,
+      border: `1px solid ${inputBorder}`,
+      borderRadius: "8px",
+      padding: "0.65rem 0.85rem",
+      color: text,
+      fontSize: "0.85rem",
+      outline: "none",
+    },
+    fieldWrap: {
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "0.4rem",
+    },
+    fieldLabel: {
+      color: textMuted,
+      fontSize: "0.7rem",
+      fontWeight: 700,
+      letterSpacing: "0.08em",
+      textTransform: "uppercase" as const,
+    },
+    fieldInput: {
+      background: inputBg,
+      border: `1px solid ${inputBorder}`,
+      borderRadius: "8px",
+      padding: "0.7rem 0.9rem",
+      color: text,
+      fontSize: "0.85rem",
+      outline: "none",
+      width: "100%",
+      boxSizing: "border-box" as const,
+    },
+    saveBtn: {
+      background: "linear-gradient(135deg, #C9A84C, #8B6914)",
+      color: "#0A0A0A",
+      border: "none",
+      borderRadius: "10px",
+      padding: "0.85rem 1.6rem",
+      fontSize: "0.82rem",
+      fontWeight: 700,
+      letterSpacing: "0.1em",
+      cursor: "pointer",
+      marginTop: "1rem",
+      alignSelf: "flex-start",
+      boxShadow: "0 4px 15px rgba(201,168,76,0.25)",
+    },
+    addBtn: {
+      background: isDark ? "rgba(255,255,255,0.03)" : "#ffffff",
+      border: `1px dashed ${inputBorder}`,
+      borderRadius: "10px",
+      padding: "0.75rem",
+      color: textMuted,
+      fontSize: "0.82rem",
+      cursor: "pointer",
+      textAlign: "center" as const,
+    },
+    addBtnSmall: {
+      background: "transparent",
+      border: "none",
+      color: isDark ? "#C9A84C" : "#8B6914",
+      fontSize: "0.78rem",
+      cursor: "pointer",
+      padding: "0.3rem 0",
+      fontWeight: 700,
+      alignSelf: "flex-start",
+    },
+    removeBtn: {
+      background: isDark ? "rgba(220,38,38,0.15)" : "#fee2e2",
+      border: `1px solid ${isDark ? "rgba(220,38,38,0.25)" : "#fca5a5"}`,
+      color: isDark ? "#fca5a5" : "#991b1b",
+      borderRadius: "6px",
+      padding: "0.35rem 0.65rem",
+      fontSize: "0.72rem",
+      cursor: "pointer",
+      fontWeight: 600,
+      flexShrink: 0,
+    },
+    hint: {
+      color: textDim,
+      fontSize: "0.78rem",
+      fontStyle: "italic" as const,
+      margin: 0,
+    },
+    mediaPreview: {
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "0.5rem",
+    },
+    previewImg: {
+      width: "120px",
+      height: "120px",
+      objectFit: "cover" as const,
+      borderRadius: "8px",
+      border: `1px solid ${border}`,
+    },
+    previewVideo: {
+      width: "100%",
+      maxWidth: "320px",
+      borderRadius: "8px",
+      border: `1px solid ${border}`,
+    },
+    submissionMetaGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+      gap: "0.75rem",
+    },
+    submissionMetaItem: {
+      background: subGroupBg,
+      border: `1px solid ${border}`,
+      borderRadius: "8px",
+      padding: "0.75rem",
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "0.35rem",
+    },
+    submissionMetaValue: {
+      color: text,
+      fontSize: "0.86rem",
+      fontWeight: 600,
+      wordBreak: "break-word" as const,
+    },
+    submissionImageGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
+      gap: "0.75rem",
+    },
+    submissionMediaLink: {
+      display: "block",
+      borderRadius: "8px",
+      overflow: "hidden",
+      border: `1px solid ${border}`,
+      background: subGroupBg,
+    },
+    submissionImg: {
+      width: "100%",
+      aspectRatio: "1 / 1",
+      objectFit: "cover" as const,
+      display: "block",
+    },
+    mediaPath: {
+      color: textDim,
+      fontSize: "0.72rem",
+      wordBreak: "break-all" as const,
+    },
+    mediaActions: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    noMedia: {
+      color: textDim,
+      fontSize: "0.82rem",
+      fontStyle: "italic" as const,
+    },
+    uploadLabel: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "0.5rem",
+      background: inputBg,
+      border: `1px solid ${inputBorder}`,
+      borderRadius: "8px",
+      padding: "0.55rem 1.1rem",
+      color: textMuted,
+      fontSize: "0.78rem",
+      fontWeight: 600,
+      cursor: "pointer",
+      alignSelf: "flex-start",
+    },
+    fileInput: {
+      display: "none",
+    },
+    toast: {
+      position: "fixed" as const,
+      bottom: "2rem",
+      right: "2rem",
+      padding: "0.85rem 1.6rem",
+      borderRadius: "10px",
+      color: "#fff",
+      fontSize: "0.85rem",
+      fontWeight: 600,
+      zIndex: 99999,
+      boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+    },
+  };
+}

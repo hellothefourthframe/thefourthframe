@@ -3,6 +3,7 @@ import Services from "./components/Services";
 import Founders from "./components/Founders";
 import PortfolioExplorer from "./components/PortfolioExplorer";
 import ContactSection from "./components/ContactSection";
+import Preloader from "./components/Preloader";
 import { getSiteContent } from "./lib/data";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ export default async function Home() {
 
   return (
     <main>
+      <Preloader logo={content.site.logo} siteName={content.site.name} />
       <Hero heroMedia={content.heroMedia} />
       <Founders
         foundersSection={content.foundersSection}

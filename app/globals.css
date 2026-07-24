@@ -2318,6 +2318,7 @@ p {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  min-height: 99vh;
 }
 
 .accent-line-both {

@@ -71,11 +71,15 @@ export default function Footer({ site, socialLinks, footer }: FooterProps) {
       <div className="footer-backdrop" aria-hidden="true" />
       <div className="footer-watermark">FOURTH FRAME</div>
 
-      {!isContactPage && (
+      {!isContactPage && (footer.ctaVideoSrc || (footer.ctaHeadline && footer.ctaHeadline.trim())) && (
         <div
           ref={ctaBandRef}
           className="footer-top-band flex-center-vertical"
-          style={{ position: "relative", overflow: "hidden" }}
+          style={{
+            position: "relative",
+            overflow: "hidden",
+            minHeight: "99vh",
+          }}
         >
           {shouldLoadBandVideo && footer.ctaVideoSrc ? (
             <video
@@ -118,9 +122,11 @@ export default function Footer({ site, socialLinks, footer }: FooterProps) {
             }}
           />
 
-          <div className="footer-top-copy" style={{ position: "relative", zIndex: 2 }}>
-            <h2>{footer.ctaHeadline}</h2>
-          </div>
+          {footer.ctaHeadline && footer.ctaHeadline.trim() ? (
+            <div className="footer-top-copy" style={{ position: "relative", zIndex: 2 }}>
+              <h2>{footer.ctaHeadline}</h2>
+            </div>
+          ) : null}
         </div>
       )}
 

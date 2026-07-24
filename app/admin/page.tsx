@@ -897,6 +897,14 @@ function FooterSection({ content, onSave, onUpload, onDelete }: SectionProps) {
         }}>+ Add Location</button>
       </div>
 
+      <div style={S.subGroup}>
+        <h3 style={S.subTitle}>CTA Headline Overlay Text</h3>
+        <p style={S.hint}>
+          Text displayed over the footer CTA video (e.g. &quot;Build visuals that look premium before production even starts.&quot;). Leave empty if you don&apos;t want to show any headline text over the footer video.
+        </p>
+        <FieldTextarea label="CTA Headline" value={footer.ctaHeadline || ""} onChange={(v) => setFooter({ ...footer, ctaHeadline: v })} />
+      </div>
+
       <button style={S.saveBtn} onClick={() => onSave({ footer })}>Save Footer</button>
     </div>
   );

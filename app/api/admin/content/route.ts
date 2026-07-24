@@ -1,15 +1,13 @@
-
-
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/app/lib/mongodb";
 import { getAdminFromCookies } from "@/app/lib/auth";
 
-// GET — Public: fetch all site content
+// GET — Public: fetch all site content directly from MongoDB
 export async function GET() {
   try {
     const db = await getDb();
-    const content = await db.collection("siteContent").findOne({});
+    const content = await db.collection("siteContent").findOne({}, { sort: { _id: -1 } });
 
     if (!content) {
       return NextResponse.json({ error: "No content found" }, { status: 404 });
@@ -17,6 +15,7 @@ export async function GET() {
 
     const data = { ...content };
 
+    delete data._id;
     delete data.createdAt;
     delete data.updatedAt;
 
@@ -30,7 +29,7 @@ export async function GET() {
   }
 }
 
-// PUT — Admin only: update site content (partial update)
+// PUT — Admin only: update site content in MongoDB
 export async function PUT(request: Request) {
   try {
     const admin = await getAdminFromCookies();
@@ -45,18 +44,26 @@ export async function PUT(request: Request) {
     delete updates.createdAt;
 
     const db = await getDb();
-    const result = await db.collection("siteContent").updateOne(
-      {},
-      {
-        $set: {
-          ...updates,
-          updatedAt: new Date(),
-        },
-      }
-    );
+    const latest = await db.collection("siteContent").findOne({}, { sort: { _id: -1 } });
 
-    if (result.matchedCount === 0) {
-      return NextResponse.json({ error: "No content document found" }, { status: 404 });
+    if (!latest) {
+      // If collection is empty, insert the document
+      await db.collection("siteContent").insertOne({
+        ...updates,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    } else {
+      // Update the latest document by _id
+      await db.collection("siteContent").updateOne(
+        { _id: latest._id },
+        {
+          $set: {
+            ...updates,
+            updatedAt: new Date(),
+          },
+        }
+      );
     }
 
     revalidatePath("/", "layout");
@@ -67,6 +74,7 @@ export async function PUT(request: Request) {
     revalidatePath("/gallery", "page");
     revalidatePath("/plans", "page");
     revalidatePath("/contact", "page");
+    revalidatePath("/submissionform", "page");
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,3 +1,0 @@
-ting33497_db_user
-viYkqo9nyjAdEtfL
-mongodb+srv://ting33497_db_user:viYkqo9nyjAdEtfL@thefourthframe.ivm4g4z.mongodb.net/?appName=thefourthframe

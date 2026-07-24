@@ -60,6 +60,8 @@ export default function PortfolioExplorer({ modelsSection, models }: PortfolioEx
             display: "flex",
             gap: "2rem",
             width: "max-content",
+            willChange: "transform",
+            transform: "translateZ(0)",
           }}
           animate={{ x: ["0%", "-33.333%"] }}
           transition={{
@@ -90,7 +92,7 @@ export default function PortfolioExplorer({ modelsSection, models }: PortfolioEx
                   src={model.image}
                   alt={model.name}
                   fill
-                  quality={90}
+                  quality={95}
                   className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                   sizes="360px"
                 />

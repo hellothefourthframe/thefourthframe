@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import type { ModelSubmission, SiteContent } from "@/app/lib/types";
+import type { ModelSubmission, SiteContent, ContactQuery } from "@/app/lib/types";
 import { uploadFile as blobUpload } from "@/app/lib/upload";
 import {
   formatMaxVideoSize,
@@ -179,12 +179,14 @@ export default function AdminDashboard() {
 
   const sections = [
     { key: "site", label: "Site Info" },
+    { key: "fonts", label: "Fonts" },
     { key: "social", label: "Social Links" },
     { key: "hero", label: "Hero Media" },
     { key: "founders", label: "Founders" },
     { key: "services", label: "Services" },
     { key: "models", label: "Models" },
-    { key: "contact", label: "Contact" },
+    { key: "queries", label: "Contact Queries" },
+    { key: "applications", label: "Model Applications" },
     { key: "footer", label: "Footer" },
   ];
 
@@ -252,8 +254,28 @@ export default function AdminDashboard() {
       {/* Sidebar */}
       <aside className="admin-sidebar" style={styles.sidebar}>
         <div className="admin-sidebar-logo" style={styles.sidebarLogo}>
-          <span style={styles.logoMark}>TF</span>
-          <span style={styles.logoText}>ADMIN PANEL</span>
+          {content.site?.logo ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <img
+                src={content.site.logo}
+                alt={`${content.site?.name || "The Fourth Frame"} Logo`}
+                style={{
+                  height: "36px",
+                  width: "auto",
+                  maxWidth: "140px",
+                  objectFit: "contain",
+                }}
+              />
+              <span style={{ fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.15em", color: "#C9A84C" }}>
+                ADMIN
+              </span>
+            </div>
+          ) : (
+            <>
+              <span style={styles.logoMark}>TF</span>
+              <span style={styles.logoText}>ADMIN PANEL</span>
+            </>
+          )}
         </div>
         <nav className="admin-nav" style={styles.nav}>
           {sections.map((s) => (
@@ -289,7 +311,10 @@ export default function AdminDashboard() {
 
         <div className="admin-content" style={styles.content}>
           {activeSection === "site" && (
-            <SiteSection content={content} onSave={saveContent} styles={styles} />
+            <SiteSection content={content} onSave={saveContent} onUpload={uploadFile} styles={styles} />
+          )}
+          {activeSection === "fonts" && (
+            <FontsSection content={content} onSave={saveContent} styles={styles} />
           )}
           {activeSection === "social" && (
             <SocialSection content={content} onSave={saveContent} styles={styles} />
@@ -306,8 +331,11 @@ export default function AdminDashboard() {
           {activeSection === "models" && (
             <ModelsSection content={content} onSave={saveContent} onUpload={uploadFile} onDelete={deleteFile} styles={styles} />
           )}
-          {activeSection === "contact" && (
-            <ContactSection showToast={showToast} styles={styles} />
+          {activeSection === "queries" && (
+            <ContactQueriesSection showToast={showToast} styles={styles} />
+          )}
+          {activeSection === "applications" && (
+            <ModelSubmissionsSection showToast={showToast} styles={styles} />
           )}
           {activeSection === "footer" && (
             <FooterSection content={content} onSave={saveContent} onUpload={uploadFile} onDelete={deleteFile} styles={styles} />
@@ -384,15 +412,45 @@ interface SectionProps {
 }
 
 // ── SITE INFO ──────────────────────────────────────────
-function SiteSection({ content, onSave, styles }: SectionProps) {
+function SiteSection({ content, onSave, onUpload, styles }: SectionProps) {
   const [site, setSite] = useState(content.site);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUpload) return;
+    setUploadingLogo(true);
+    const uploadedUrl = await onUpload(file, "image");
+    setUploadingLogo(false);
+    if (uploadedUrl) {
+      setSite((prev) => ({ ...prev, logo: uploadedUrl }));
+    }
+  };
 
   return (
     <div style={styles.sectionWrap}>
       <Field label="Site Name" value={site.name} onChange={(v) => setSite({ ...site, name: v })} styles={styles} />
       <Field label="Operated By" value={site.operatedBy} onChange={(v) => setSite({ ...site, operatedBy: v })} styles={styles} />
       <Field label="Established Year" value={String(site.established)} onChange={(v) => setSite({ ...site, established: Number(v) || 2024 })} styles={styles} />
-      <Field label="Logo Path" value={site.logo} onChange={(v) => setSite({ ...site, logo: v })} styles={styles} />
+      
+      {/* Site Logo Upload & Preview */}
+      <div style={styles.subGroup}>
+        <h3 style={styles.subTitle}>Website Logo</h3>
+        {site.logo ? (
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "0.75rem" }}>
+            <img src={site.logo} alt="Site Logo Preview" style={{ height: "48px", width: "auto", objectFit: "contain", background: "rgba(255,255,255,0.05)", padding: "0.5rem", borderRadius: "8px" }} />
+            <span style={{ fontSize: "0.8rem", color: styles.textMuted.color }}>Current Logo</span>
+          </div>
+        ) : null}
+        <Field label="Logo Path / Image URL" value={site.logo} onChange={(v) => setSite({ ...site, logo: v })} styles={styles} />
+        {onUpload && (
+          <label style={{ ...styles.uploadLabel, width: "fit-content", marginTop: "0.5rem" }}>
+            {uploadingLogo ? "Uploading Logo..." : "Upload New Logo Image"}
+            <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleLogoUpload} disabled={uploadingLogo} />
+          </label>
+        )}
+      </div>
+
       <Field label="Email" value={site.email} onChange={(v) => setSite({ ...site, email: v })} styles={styles} />
       <Field label="Footer Email" value={site.footerEmail} onChange={(v) => setSite({ ...site, footerEmail: v })} styles={styles} />
       <Field label="Footer Email Link (mailto:)" value={site.footerEmailHref} onChange={(v) => setSite({ ...site, footerEmailHref: v })} styles={styles} />
@@ -424,6 +482,79 @@ function SiteSection({ content, onSave, styles }: SectionProps) {
       </div>
 
       <button style={styles.saveBtn} onClick={() => onSave({ site })}>Save Site Info</button>
+    </div>
+  );
+}
+
+// ── WEBSITE FONTS ───────────────────────────────────────
+function FontsSection({ content, onSave, styles }: SectionProps) {
+  const [headingFont, setHeadingFont] = useState(content.site.headingFont || "serif");
+
+  const fontOptions = [
+    { key: "serif", name: "Playfair Display", category: "Luxury Serif", sample: "THE FOURTH FRAME" },
+    { key: "pacifico", name: "Pacifico", category: "Cursive Script", sample: "The Fourth Frame" },
+    { key: "great-vibes", name: "Great Vibes", category: "Calligraphic Script", sample: "The Fourth Frame" },
+    { key: "cormorant", name: "Cormorant Garamond", category: "Classic Editorial", sample: "THE FOURTH FRAME" },
+    { key: "cinzel", name: "Cinzel", category: "Roman Capitals", sample: "THE FOURTH FRAME" },
+  ];
+
+  const handleSaveFont = () => {
+    onSave({
+      site: {
+        ...content.site,
+        headingFont,
+      },
+    });
+  };
+
+  return (
+    <div style={styles.sectionWrap}>
+      <div style={styles.subGroup}>
+        <h3 style={styles.subTitle}>Select Website Heading & Accent Font</h3>
+        <p style={styles.hint}>
+          Choose the active font family for headings, titles, and accent labels across the entire website.
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem", marginTop: "0.5rem" }}>
+          {fontOptions.map((opt) => {
+            const isSelected = headingFont === opt.key;
+            return (
+              <div
+                key={opt.key}
+                onClick={() => setHeadingFont(opt.key)}
+                style={{
+                  ...styles.card,
+                  cursor: "pointer",
+                  border: isSelected ? "2px solid #C9A84C" : styles.card.border,
+                  background: isSelected ? (styles.card.background === "#121215" ? "#1a1a22" : "#fdfbf7") : styles.card.background,
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.8rem", fontWeight: 700, color: isSelected ? "#C9A84C" : styles.textMuted.color }}>
+                    {opt.name}
+                  </span>
+                  {isSelected && <span style={{ fontSize: "0.72rem", color: "#C9A84C", fontWeight: 800 }}>✓ ACTIVE</span>}
+                </div>
+                <span style={{ fontSize: "0.68rem", color: styles.hint.color }}>{opt.category}</span>
+                <div
+                  style={{
+                    fontSize: opt.key === "great-vibes" ? "1.6rem" : opt.key === "pacifico" ? "1.2rem" : "1.1rem",
+                    color: styles.text.color,
+                    marginTop: "0.6rem",
+                    padding: "0.5rem 0 0 0",
+                    borderTop: "1px solid rgba(255,255,255,0.1)",
+                  }}
+                >
+                  {opt.sample}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <button style={styles.saveBtn} onClick={handleSaveFont}>Save Website Font Choice</button>
     </div>
   );
 }
@@ -822,11 +953,247 @@ function ModelsSection({ content, onSave, onUpload, onDelete, styles }: SectionP
   );
 }
 
-// ── CONTACT & MODEL SUBMISSIONS ─────────────────────────
-function ContactSection({ showToast, styles }: { showToast: (msg: string, type?: "ok" | "err") => void; styles: AdminStyles }) {
-  const [submissions, setSubmissions] = useState<ModelSubmission[]>([]);
+// ── CONTACT QUERIES SECTION (LIST VIEW + SEARCH + 10 PAGINATION) ───
+function ContactQueriesSection({ showToast, styles }: { showToast: (msg: string, type?: "ok" | "err") => void; styles: AdminStyles }) {
+  const [queries, setQueries] = useState<ContactQuery[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const loadQueries = useCallback(async (pageToLoad: number) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/contact-queries?page=${pageToLoad}&limit=10`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load contact queries");
+      setQueries(data.queries || []);
+      setPage(data.page || 1);
+      setTotalPages(data.totalPages || 1);
+      setTotalCount(data.totalQueries || 0);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to load contact queries", "err");
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    loadQueries(1);
+  }, [loadQueries]);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this contact query?")) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/contact-queries?id=${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
+      setQueries((prev) => prev.filter((q) => q._id !== id));
+      showToast("Contact query deleted");
+      loadQueries(page);
+    } catch {
+      showToast("Failed to delete contact query", "err");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const filteredQueries = queries.filter((q) => {
+    const term = searchQuery.toLowerCase();
+    return (
+      q.name.toLowerCase().includes(term) ||
+      q.email.toLowerCase().includes(term) ||
+      q.interest.toLowerCase().includes(term) ||
+      q.timeline.toLowerCase().includes(term) ||
+      q.message.toLowerCase().includes(term)
+    );
+  });
+
+  return (
+    <div style={styles.sectionWrap}>
+      {/* Top Controls */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+        <div>
+          <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, color: styles.text.color }}>
+            Contact Queries ({totalCount})
+          </h3>
+          <p style={styles.hint}>Showing 10 items per page</p>
+        </div>
+
+        {/* Local Search Input */}
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flex: 1, maxWidth: "360px" }}>
+          <input
+            style={{ ...styles.fieldInput, padding: "0.5rem 0.8rem", fontSize: "0.82rem" }}
+            placeholder="🔍 Search name, email, interest..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <button style={styles.addBtnSmall} onClick={() => loadQueries(page)}>Refresh</button>
+        </div>
+      </div>
+
+      {loading ? (
+        <p style={{ color: styles.textMuted.color }}>Loading contact queries...</p>
+      ) : filteredQueries.length === 0 ? (
+        <div style={styles.card}>
+          <p style={styles.noMedia}>{searchQuery ? "No matching queries found." : "No contact queries received yet."}</p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          {/* List Table Header */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1.2fr 1.8fr 1.1fr 1fr 1.1fr 170px",
+              gap: "0.75rem",
+              padding: "0.7rem 1rem",
+              background: styles.subGroup.background,
+              borderRadius: "8px",
+              border: "1px solid rgba(255,255,255,0.06)",
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              color: styles.textMuted.color,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              alignItems: "center",
+            }}
+          >
+            <span>Client Name</span>
+            <span>Email</span>
+            <span>Interest</span>
+            <span>Timeline</span>
+            <span>Date</span>
+            <span style={{ textAlign: "right" }}>Action</span>
+          </div>
+
+          {/* List Rows */}
+          {filteredQueries.map((q) => {
+            const isExpanded = expandedId === q._id;
+            return (
+              <div
+                key={q._id}
+                style={{
+                  background: styles.card.background,
+                  border: `1px solid ${isExpanded ? "#C9A84C" : "rgba(255,255,255,0.08)"}`,
+                  borderRadius: "10px",
+                  overflow: "hidden",
+                  transition: "border-color 0.2s ease",
+                }}
+              >
+                {/* Main Row Bar */}
+                <div
+                  onClick={() => q._id && setExpandedId(isExpanded ? null : q._id)}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1.2fr 1.8fr 1.1fr 1fr 1.1fr 170px",
+                    gap: "0.75rem",
+                    padding: "0.85rem 1rem",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: styles.text.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.name}</span>
+                  <span style={{ color: styles.textMuted.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.email}</span>
+                  <span style={{ color: "#C9A84C", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.interest}</span>
+                  <span style={{ color: styles.text.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.timeline}</span>
+                  <span style={{ fontSize: "0.75rem", color: styles.hint.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {new Date(q.createdAt).toLocaleDateString()}
+                  </span>
+
+                  <div style={{ display: "flex", gap: "0.4rem", justifyContent: "flex-end", alignItems: "center" }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (q._id) setExpandedId(isExpanded ? null : q._id);
+                      }}
+                      style={styles.addBtnSmall}
+                    >
+                      {isExpanded ? "Close ▲" : "View Brief ▼"}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (q._id) handleDelete(q._id);
+                      }}
+                      style={styles.removeBtn}
+                      disabled={deletingId === q._id}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expanded Brief Drawer */}
+                {isExpanded && (
+                  <div
+                    style={{
+                      padding: "1rem 1.25rem",
+                      background: styles.subGroup.background,
+                      borderTop: "1px solid rgba(255,255,255,0.06)",
+                    }}
+                  >
+                    <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#C9A84C", letterSpacing: "0.1em", display: "block", marginBottom: "0.4rem" }}>
+                      PROJECT BRIEF / FULL MESSAGE
+                    </span>
+                    <p style={{ margin: 0, fontSize: "0.88rem", lineHeight: "1.6", color: styles.text.color, whiteSpace: "pre-wrap" }}>
+                      {q.message}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Pagination Footer */}
+      {totalPages > 1 && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem", paddingTop: "0.85rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+          <button
+            disabled={page <= 1 || loading}
+            onClick={() => loadQueries(page - 1)}
+            style={{
+              ...styles.addBtnSmall,
+              opacity: page <= 1 ? 0.4 : 1,
+              cursor: page <= 1 ? "not-allowed" : "pointer",
+            }}
+          >
+            ← Previous Page
+          </button>
+          <span style={{ fontSize: "0.82rem", color: styles.textMuted.color, fontWeight: 600 }}>
+            Page {page} of {totalPages}
+          </span>
+          <button
+            disabled={page >= totalPages || loading}
+            onClick={() => loadQueries(page + 1)}
+            style={{
+              ...styles.addBtnSmall,
+              opacity: page >= totalPages ? 0.4 : 1,
+              cursor: page >= totalPages ? "not-allowed" : "pointer",
+            }}
+          >
+            Next Page →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── MODEL SUBMISSIONS SECTION (LIST VIEW + SEARCH + 10 PAGINATION) ───
+function ModelSubmissionsSection({ showToast, styles }: { showToast: (msg: string, type?: "ok" | "err") => void; styles: AdminStyles }) {
+  const [submissions, setSubmissions] = useState<ModelSubmission[]>([]);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const ITEMS_PER_PAGE = 10;
 
   const loadSubmissions = useCallback(async () => {
     setLoading(true);
@@ -846,11 +1213,15 @@ function ContactSection({ showToast, styles }: { showToast: (msg: string, type?:
     loadSubmissions();
   }, [loadSubmissions]);
 
-  const handleDelete = async (id: string) => {
+  const handleDeleteModel = async (id: string) => {
     if (!confirm("Are you sure you want to delete this submission?")) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/model-submissions?id=${id}`, { method: "DELETE" });
+      const res = await fetch("/api/model-submissions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
       if (!res.ok) throw new Error("Delete failed");
       setSubmissions((prev) => prev.filter((item) => item._id !== id));
       showToast("Submission deleted");
@@ -861,82 +1232,207 @@ function ContactSection({ showToast, styles }: { showToast: (msg: string, type?:
     }
   };
 
-  if (loading) return <p style={{ color: styles.textMuted }}>Loading applications...</p>;
+  const filteredSubmissions = submissions.filter((sub) => {
+    const term = searchQuery.toLowerCase();
+    return (
+      sub.fullname.toLowerCase().includes(term) ||
+      sub.email.toLowerCase().includes(term) ||
+      sub.contact.toLowerCase().includes(term) ||
+      sub.city.toLowerCase().includes(term) ||
+      sub.height.toLowerCase().includes(term)
+    );
+  });
+
+  const totalPages = Math.ceil(filteredSubmissions.length / ITEMS_PER_PAGE) || 1;
+  const paginatedSubmissions = filteredSubmissions.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   return (
     <div style={styles.sectionWrap}>
-      <div style={styles.subGroup}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <h3 style={styles.subTitle}>Model Applications</h3>
-            <p style={styles.hint}>Public submissions sent via the model form</p>
-          </div>
-          <button style={styles.addBtnSmall} onClick={loadSubmissions}>Refresh</button>
+      {/* Top Controls */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+        <div>
+          <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, color: styles.text.color }}>
+            Model Applications ({filteredSubmissions.length})
+          </h3>
+          <p style={styles.hint}>Showing 10 items per page</p>
         </div>
 
-        {submissions.length === 0 ? (
-          <p style={styles.noMedia}>No model applications received yet.</p>
-        ) : (
-          submissions.map((sub) => (
-            <div key={sub._id} style={styles.card}>
-              <div style={styles.cardHeader}>
-                <h4 style={styles.cardTitle}>{sub.fullname}</h4>
-                <button
-                  style={styles.removeBtn}
-                  onClick={() => handleDelete(sub._id)}
-                  disabled={deletingId === sub._id}
-                >
-                  {deletingId === sub._id ? "Deleting..." : "Delete"}
-                </button>
-              </div>
-
-              <div style={styles.submissionMetaGrid}>
-                <div style={styles.submissionMetaItem}>
-                  <span style={styles.fieldLabel}>EMAIL</span>
-                  <span style={styles.submissionMetaValue}>{sub.email}</span>
-                </div>
-                <div style={styles.submissionMetaItem}>
-                  <span style={styles.fieldLabel}>CONTACT</span>
-                  <span style={styles.submissionMetaValue}>{sub.contact}</span>
-                </div>
-                <div style={styles.submissionMetaItem}>
-                  <span style={styles.fieldLabel}>AGE</span>
-                  <span style={styles.submissionMetaValue}>{sub.age}</span>
-                </div>
-                <div style={styles.submissionMetaItem}>
-                  <span style={styles.fieldLabel}>HEIGHT</span>
-                  <span style={styles.submissionMetaValue}>{sub.height}</span>
-                </div>
-                <div style={styles.submissionMetaItem}>
-                  <span style={styles.fieldLabel}>CITY</span>
-                  <span style={styles.submissionMetaValue}>{sub.city}</span>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.5rem" }}>
-                <span style={styles.fieldLabel}>SUBMITTED IMAGES ({sub.images?.length || 0})</span>
-                <div style={styles.submissionImageGrid}>
-                  {sub.images?.map((img, i) => (
-                    <a key={i} href={img} target="_blank" rel="noreferrer" style={styles.submissionMediaLink}>
-                      <img src={img} alt={`Submission photo ${i + 1}`} style={styles.submissionImg} />
-                    </a>
-                  ))}
-                </div>
-              </div>
-
-              {sub.video && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.5rem" }}>
-                  <span style={styles.fieldLabel}>SUBMITTED VIDEO</span>
-                  <video src={sub.video} controls style={{ width: "100%", maxWidth: "360px", borderRadius: "8px" }} />
-                  <a href={sub.video} target="_blank" rel="noreferrer" style={{ fontSize: "0.75rem", color: "#C9A84C" }}>
-                    Open Video in New Tab ↗
-                  </a>
-                </div>
-              )}
-            </div>
-          ))
-        )}
+        {/* Local Search Input */}
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flex: 1, maxWidth: "360px" }}>
+          <input
+            style={{ ...styles.fieldInput, padding: "0.5rem 0.8rem", fontSize: "0.82rem" }}
+            placeholder="🔍 Search model name, city, email..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
+          />
+          <button style={styles.addBtnSmall} onClick={loadSubmissions}>Refresh</button>
+        </div>
       </div>
+
+      {loading ? (
+        <p style={{ color: styles.textMuted.color }}>Loading model applications...</p>
+      ) : paginatedSubmissions.length === 0 ? (
+        <div style={styles.card}>
+          <p style={styles.noMedia}>{searchQuery ? "No matching model applications." : "No model applications received yet."}</p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          {/* List Table Header */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1.2fr 1.8fr 1.1fr 1fr 1.1fr 170px",
+              gap: "0.75rem",
+              padding: "0.7rem 1rem",
+              background: styles.subGroup.background,
+              borderRadius: "8px",
+              border: "1px solid rgba(255,255,255,0.06)",
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              color: styles.textMuted.color,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              alignItems: "center",
+            }}
+          >
+            <span>Model Name</span>
+            <span>Email</span>
+            <span>Contact</span>
+            <span>City</span>
+            <span>Height / Age</span>
+            <span style={{ textAlign: "right" }}>Action</span>
+          </div>
+
+          {/* List Rows */}
+          {paginatedSubmissions.map((sub) => {
+            const isExpanded = expandedId === sub._id;
+            return (
+              <div
+                key={sub._id}
+                style={{
+                  background: styles.card.background,
+                  border: `1px solid ${isExpanded ? "#C9A84C" : "rgba(255,255,255,0.08)"}`,
+                  borderRadius: "10px",
+                  overflow: "hidden",
+                  transition: "border-color 0.2s ease",
+                }}
+              >
+                {/* Main Row Bar */}
+                <div
+                  onClick={() => sub._id && setExpandedId(isExpanded ? null : sub._id)}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1.2fr 1.8fr 1.1fr 1fr 1.1fr 170px",
+                    gap: "0.75rem",
+                    padding: "0.85rem 1rem",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: styles.text.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub.fullname}</span>
+                  <span style={{ color: styles.textMuted.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub.email}</span>
+                  <span style={{ color: styles.text.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub.contact}</span>
+                  <span style={{ color: "#C9A84C", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub.city}</span>
+                  <span style={{ color: styles.text.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub.height} / {sub.age} yrs</span>
+
+                  <div style={{ display: "flex", gap: "0.4rem", justifyContent: "flex-end", alignItems: "center" }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (sub._id) setExpandedId(isExpanded ? null : sub._id);
+                      }}
+                      style={styles.addBtnSmall}
+                    >
+                      {isExpanded ? "Hide ▲" : `Media (${sub.images?.length || 0}) ▼`}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (sub._id) handleDeleteModel(sub._id);
+                      }}
+                      style={styles.removeBtn}
+                      disabled={deletingId === sub._id}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expanded Media Gallery Drawer */}
+                {isExpanded && (
+                  <div
+                    style={{
+                      padding: "1.2rem",
+                      background: styles.subGroup.background,
+                      borderTop: "1px solid rgba(255,255,255,0.06)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "1rem",
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#C9A84C", letterSpacing: "0.1em", display: "block", marginBottom: "0.5rem" }}>
+                        SUBMITTED PHOTOS ({sub.images?.length || 0})
+                      </span>
+                      <div style={styles.submissionImageGrid}>
+                        {sub.images?.map((img, i) => (
+                          <a key={i} href={img} target="_blank" rel="noreferrer" style={styles.submissionMediaLink}>
+                            <img src={img} alt={`Submission photo ${i + 1}`} style={styles.submissionImg} />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+
+                    {sub.video && (
+                      <div>
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#C9A84C", letterSpacing: "0.1em", display: "block", marginBottom: "0.5rem" }}>
+                          SUBMITTED VIDEO
+                        </span>
+                        <video src={sub.video} controls style={{ width: "100%", maxWidth: "380px", borderRadius: "8px" }} />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Pagination Footer */}
+      {totalPages > 1 && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem", paddingTop: "0.85rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+          <button
+            disabled={page <= 1}
+            onClick={() => setPage(page - 1)}
+            style={{
+              ...styles.addBtnSmall,
+              opacity: page <= 1 ? 0.4 : 1,
+              cursor: page <= 1 ? "not-allowed" : "pointer",
+            }}
+          >
+            ← Previous Page
+          </button>
+          <span style={{ fontSize: "0.82rem", color: styles.textMuted.color, fontWeight: 600 }}>
+            Page {page} of {totalPages}
+          </span>
+          <button
+            disabled={page >= totalPages}
+            onClick={() => setPage(page + 1)}
+            style={{
+              ...styles.addBtnSmall,
+              opacity: page >= totalPages ? 0.4 : 1,
+              cursor: page >= totalPages ? "not-allowed" : "pointer",
+            }}
+          >
+            Next Page →
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1264,7 +1760,8 @@ function getThemeStyles(theme: "dark" | "light"): AdminStyles {
       letterSpacing: "0.1em",
     },
     content: {
-      maxWidth: "850px",
+      width: "100%",
+      maxWidth: "100%",
     },
     center: {
       minHeight: "100vh",

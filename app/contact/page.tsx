@@ -20,12 +20,42 @@ const contactCards = [
 ];
 
 export default function ContactPage() {
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    event.currentTarget.reset();
-    setSubmitted(true);
+    setErrorMsg(null);
+    setSubmitting(true);
+
+    const formData = new FormData(event.currentTarget);
+    const payload = {
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+      interest: formData.get("interest") as string,
+      timeline: formData.get("timeline") as string,
+      message: formData.get("message") as string,
+    };
+
+    try {
+      const res = await fetch("/api/contact-queries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Submission failed");
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Failed to send message. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -178,7 +208,7 @@ export default function ContactPage() {
 
                   <div className="contact-field">
                     <label htmlFor="timeline">Target Timeline</label>
-                    <input id="timeline" name="timeline" type="text" placeholder="Next 2-4 weeks" />
+                    <input id="timeline" name="timeline" type="text" placeholder="Next 2-4 weeks" required />
                   </div>
 
                   <div className="contact-field contact-field-full">
@@ -192,15 +222,21 @@ export default function ContactPage() {
                   </div>
                 </div>
 
+                {errorMsg ? (
+                  <div style={{ color: "#dc2626", fontSize: "0.85rem", marginTop: "1rem", fontWeight: 600 }}>
+                    {errorMsg}
+                  </div>
+                ) : null}
+
                 {submitted ? (
-                  <div className="contact-status">
+                  <div className="contact-status" style={{ marginTop: "1rem" }}>
                     Thanks. Your message is ready for follow-up and we&apos;ll get back to
                     you shortly.
                   </div>
                 ) : null}
 
-                <button type="submit" className="btn-main" style={{ width: "100%" }}>
-                  Send Message
+                <button type="submit" className="btn-main" style={{ width: "100%", marginTop: "1.2rem" }} disabled={submitting || submitted}>
+                  {submitting ? "Sending..." : submitted ? "Message Sent ✓" : "Send Message"}
                 </button>
               </form>
             </motion.div>

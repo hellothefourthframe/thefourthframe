@@ -10,6 +10,7 @@ export interface SiteData {
   email: string;
   footerEmail: string;
   footerEmailHref: string;
+  headingFont?: string;
   location: {
     studio: string;
     city: string;
@@ -80,6 +81,16 @@ export interface ModelSubmission {
   city: string;
   images: string[];
   video: string | null;
+  createdAt: string;
+}
+
+export interface ContactQuery {
+  _id?: string;
+  name: string;
+  email: string;
+  interest: string;
+  timeline: string;
+  message: string;
   createdAt: string;
 }
 

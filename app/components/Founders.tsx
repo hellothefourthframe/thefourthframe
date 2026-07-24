@@ -58,6 +58,8 @@ export default function Founders({ foundersSection, founders }: FoundersProps) {
             display: "flex",
             gap: "0px",
             width: "max-content",
+            willChange: "transform",
+            transform: "translateZ(0)",
           }}
           animate={{ x: ["0%", "-33.333%"] }}
           transition={{
@@ -86,6 +88,7 @@ export default function Founders({ foundersSection, founders }: FoundersProps) {
                   src={founder.image}
                   alt={founder.name}
                   fill
+                  quality={95}
                   className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                   sizes="380px"
                 />

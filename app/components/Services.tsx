@@ -124,11 +124,12 @@ function ServiceCard({ service, index, isInView }: { service: Service; index: nu
               <h3
                 style={{
                   fontFamily: "var(--font-heading)",
-                  fontSize: "clamp(1.4rem, 2vw, 1.8rem)",
+                  fontSize: "clamp(1.05rem, 1.3vw, 1.25rem)",
                   fontWeight: 600,
                   color: "#ffffff",
                   textTransform: "uppercase",
-                  letterSpacing: "0.05em",
+                  letterSpacing: "0.03em",
+                  lineHeight: 1.3,
                   textShadow: "0 2px 10px rgba(0,0,0,0.5)",
                 }}
               >
@@ -175,10 +176,11 @@ function ServiceCard({ service, index, isInView }: { service: Service; index: nu
               <h3
                 style={{
                   fontFamily: "var(--font-heading)",
-                  fontSize: "1.5rem",
+                  fontSize: "1.25rem",
                   fontWeight: 600,
                   color: "#ffffff",
-                  marginBottom: "1rem",
+                  lineHeight: 1.3,
+                  marginBottom: "0.8rem",
                   textTransform: "uppercase",
                 }}
               >
@@ -254,7 +256,7 @@ export default function Services({ servicesSection, services }: ServicesProps) {
 
   return (
     <section className="section bg-white anchor-section" id="services" ref={ref}>
-      <div className="page-container">
+      <div style={{ width: "100%", maxWidth: "1760px", margin: "0 auto", padding: "0 2.5rem" }}>
         <div className="section-center mb-16">
           <motion.span
             className="section-label"

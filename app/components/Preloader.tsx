@@ -7,19 +7,76 @@ import Image from "next/image";
 interface PreloaderProps {
   logo?: string;
   siteName?: string;
+  mediaToPreload?: string[];
 }
 
-export default function Preloader({ logo = "/images/logo.jpg", siteName = "THE FOURTH FRAME" }: PreloaderProps) {
+export default function Preloader({
+  logo = "/images/logo.jpg",
+  siteName = "THE FOURTH FRAME",
+  mediaToPreload = [],
+}: PreloaderProps) {
   const [loading, setLoading] = useState(true);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    // Hide loader after 1.4 seconds for a swift, high-end entry
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1400);
+    // Unique list of image & video URLs to preload
+    const allUrls = Array.from(new Set([logo, ...mediaToPreload])).filter(
+      (url): url is string => Boolean(url) && typeof url === "string" && url.trim().length > 0
+    );
 
-    return () => clearTimeout(timer);
-  }, []);
+    if (allUrls.length === 0) {
+      setProgress(100);
+      const t = setTimeout(() => setLoading(false), 800);
+      return () => clearTimeout(t);
+    }
+
+    let loadedCount = 0;
+    const total = allUrls.length;
+    let isMounted = true;
+
+    const updateProgress = () => {
+      if (!isMounted) return;
+      loadedCount++;
+      const currentPct = Math.min(100, Math.round((loadedCount / total) * 100));
+      setProgress(currentPct);
+
+      if (loadedCount >= total) {
+        setTimeout(() => {
+          if (isMounted) setLoading(false);
+        }, 400);
+      }
+    };
+
+    // Preload each image/video
+    allUrls.forEach((url) => {
+      const isVideo = url.match(/\.(mp4|webm|mov|avi|ogg)(\?.*)?$/i);
+      if (isVideo) {
+        const video = document.createElement("video");
+        video.oncanplaythrough = updateProgress;
+        video.onerror = updateProgress;
+        video.src = url;
+        video.load();
+      } else {
+        const img = new window.Image();
+        img.onload = updateProgress;
+        img.onerror = updateProgress;
+        img.src = url;
+      }
+    });
+
+    // Safety fallback timeout (Max 3.5 seconds max wait)
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) {
+        setProgress(100);
+        setLoading(false);
+      }
+    }, 3500);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(safetyTimer);
+    };
+  }, [logo, mediaToPreload]);
 
   return (
     <AnimatePresence mode="wait">
@@ -39,9 +96,9 @@ export default function Preloader({ logo = "/images/logo.jpg", siteName = "THE F
           <div
             style={{
               position: "absolute",
-              width: "300px",
-              height: "300px",
-              background: "radial-gradient(circle, rgba(197,160,89,0.18) 0%, transparent 70%)",
+              width: "320px",
+              height: "320px",
+              background: "radial-gradient(circle, rgba(197,160,89,0.2) 0%, transparent 70%)",
               borderRadius: "50%",
               filter: "blur(40px)",
             }}
@@ -97,27 +154,37 @@ export default function Preloader({ logo = "/images/logo.jpg", siteName = "THE F
               </span>
             </div>
 
-            {/* Subtle Progress Bar Line */}
-            <motion.div
-              style={{
-                width: "120px",
-                height: "2px",
-                background: "rgba(255,255,255,0.1)",
-                borderRadius: "2px",
-                overflow: "hidden",
-                marginTop: "0.5rem",
-              }}
-            >
-              <motion.div
-                initial={{ width: "0%" }}
-                animate={{ width: "100%" }}
-                transition={{ duration: 1.2, ease: "easeInOut" }}
+            {/* Progress Bar Line & Percentage */}
+            <div className="flex flex-col items-center gap-2 mt-1">
+              <div
                 style={{
-                  height: "100%",
-                  background: "linear-gradient(90deg, var(--accent-gold) 0%, #ffffff 100%)",
+                  width: "140px",
+                  height: "3px",
+                  background: "rgba(255,255,255,0.1)",
+                  borderRadius: "3px",
+                  overflow: "hidden",
                 }}
-              />
-            </motion.div>
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${progress}%`,
+                    background: "linear-gradient(90deg, var(--accent-gold) 0%, #ffffff 100%)",
+                    transition: "width 0.25s ease-out",
+                  }}
+                />
+              </div>
+              <span
+                style={{
+                  fontSize: "0.68rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.15em",
+                  color: "var(--accent-gold)",
+                }}
+              >
+                {progress}%
+              </span>
+            </div>
           </motion.div>
         </motion.div>
       )}

@@ -12,9 +12,28 @@ export const revalidate = 0;
 export default async function Home() {
   const content = await getSiteContent();
 
+  const mediaToPreload: string[] = [];
+  if (content.site?.logo) mediaToPreload.push(content.site.logo);
+  if (content.heroMedia?.desktopVideo) mediaToPreload.push(content.heroMedia.desktopVideo);
+  if (content.heroMedia?.mobileVideo) mediaToPreload.push(content.heroMedia.mobileVideo);
+
+  content.founders?.forEach((f) => {
+    if (f.image) mediaToPreload.push(f.image);
+  });
+  content.services?.forEach((s) => {
+    if (s.image) mediaToPreload.push(s.image);
+  });
+  content.models?.forEach((m) => {
+    if (m.image) mediaToPreload.push(m.image);
+  });
+
   return (
     <main>
-      <Preloader logo={content.site.logo} siteName={content.site.name} />
+      <Preloader
+        logo={content.site.logo}
+        siteName={content.site.name}
+        mediaToPreload={mediaToPreload}
+      />
       <Hero heroMedia={content.heroMedia} />
       <Founders
         foundersSection={content.foundersSection}

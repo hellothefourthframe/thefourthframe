@@ -162,7 +162,7 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div style={{ ...styles.center, background: styles.bg }}>
+      <div style={{ ...styles.center, ...styles.bg }}>
         <div style={styles.spinner} />
       </div>
     );
@@ -170,9 +170,9 @@ export default function AdminDashboard() {
 
   if (!content) {
     return (
-      <div style={{ ...styles.center, background: styles.bg }}>
+      <div style={{ ...styles.center, ...styles.bg }}>
         <div style={styles.spinner} />
-        <p style={{ color: styles.textMuted, marginTop: "1rem" }}>Loading content...</p>
+        <p style={{ ...styles.textMuted, marginTop: "1rem" }}>Loading content...</p>
       </div>
     );
   }
@@ -191,7 +191,7 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="admin-layout" style={{ ...styles.layout, background: styles.bg, color: styles.text }}>
+    <div className="admin-layout" style={{ ...styles.layout, ...styles.bg, ...styles.text }}>
       <style jsx global>{`
         @media (max-width: 768px) {
           .admin-layout {

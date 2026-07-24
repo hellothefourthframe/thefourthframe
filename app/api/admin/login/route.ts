@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { getDb } from "@/app/lib/mongodb";
 import { signToken } from "@/app/lib/auth";
 
 export async function POST(request: Request) {
@@ -14,19 +12,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const db = await getDb();
-    const admin = await db.collection("admins").findOne({ username });
+    const expectedUsername = process.env.SITE_USERNAME as string;
+    const expectedPassword = process.env.SITE_PASSWORD as string;
 
-    if (!admin) {
-      return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 401 }
-      );
-
-    }
-
-    const isValid = await bcrypt.compare(password, admin.password);
-    if (!isValid) {
+    if (username !== expectedUsername || password !== expectedPassword) {
       return NextResponse.json(
         { error: "Invalid credentials" },
         { status: 401 }
@@ -34,13 +23,13 @@ export async function POST(request: Request) {
     }
 
     const token = signToken({
-      id: admin._id.toString(),
-      username: admin.username,
+      id: "admin-env",
+      username: expectedUsername,
     });
 
     const response = NextResponse.json({
       success: true,
-      admin: { username: admin.username },
+      admin: { username: expectedUsername },
     });
 
     response.cookies.set("admin_token", token, {

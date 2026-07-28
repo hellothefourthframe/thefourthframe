@@ -213,6 +213,9 @@ export default function Footer({ site, socialLinks, footer }: FooterProps) {
             {site.badges?.filter(Boolean).map((badge) => (
               <span key={badge} className="badge-v5">{badge}</span>
             ))}
+
+
+            
           </div>
           <p className="copyright-v5">
             &copy; {year} {site.name}. OPERATED BY {site.operatedBy}.

@@ -106,14 +106,14 @@ export default function ContactSection({
             </p>
 
             <Link
-              href="/submissionform"
+              href="/contactus"
               className="btn-premium nav-cta"
               style={{
                 borderColor: "var(--accent-gold, #c5a059)",
                 color: "var(--accent-gold, #c5a059)",
               }}
             >
-              JOIN AS MODEL →
+              CONTACT US →
             </Link>
           </div>
         </div>

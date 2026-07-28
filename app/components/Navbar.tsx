@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { scrollToHash } from "../lib/scrollToHash";
-import { NAV_ITEMS, NAV_CTA } from "../lib/constants";
+import { NAV_ITEMS, NAV_CTA, NAV_CTA_MODEL } from "../lib/constants";
 import type { SiteData } from "../lib/types";
 
 interface NavbarProps {
@@ -79,7 +79,7 @@ export default function Navbar({ site }: NavbarProps) {
         </ul>
 
         <div className="nav-actions">
-          {pathname === "/contact" ? (
+          {pathname === "/contact" || pathname === "/submissionform" ? (
             <Link
               href="/"
               className="flex items-center justify-center p-2 rounded-full transition-transform hover:-translate-x-1"
@@ -92,9 +92,14 @@ export default function Navbar({ site }: NavbarProps) {
               </svg>
             </Link>
           ) : (
-            <Link href={NAV_CTA.href} className="btn-premium nav-cta">
-              {NAV_CTA.label}
-            </Link>
+            <>
+              {/* <Link href={NAV_CTA_MODEL.href} className="btn-premium nav-cta nav-cta-model">
+                {NAV_CTA_MODEL.label}
+              </Link> */}
+              <Link href={NAV_CTA.href} className="btn-premium nav-cta">
+                {NAV_CTA.label}
+              </Link>
+            </>
           )}
         </div>
       </div>

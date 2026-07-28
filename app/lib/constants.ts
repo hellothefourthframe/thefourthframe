@@ -28,9 +28,14 @@ export const NAV_ITEMS = [
   { label: "Models", href: "/#work" },
 ] as const;
 
+export const NAV_CTA_MODEL = {
+  label: "Contact Us",
+  href: "/contactus",
+} as const;
+
 export const NAV_CTA = {
-  label: "Let's Build the Frame",
-  href: "/contact",
+  label: "Join as model",
+  href: "/submissionform",
 } as const;
 
 // ── Social Links ───────────────────────────────────────

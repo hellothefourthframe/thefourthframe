@@ -210,7 +210,7 @@ export default function Footer({ site, socialLinks, footer }: FooterProps) {
 
         <div className="footer-bottom-v5">
           <div className="footer-badges-v5">
-            {site.badges.map((badge) => (
+            {site.badges?.filter(Boolean).map((badge) => (
               <span key={badge} className="badge-v5">{badge}</span>
             ))}
           </div>

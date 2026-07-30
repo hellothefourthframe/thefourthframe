@@ -92,13 +92,13 @@ export default function Preloader({
       }
     });
 
-    // Safety fallback timeout (Max 4 seconds max wait)
+    // Safety fallback timeout (Max 15 seconds wait to guarantee slow mobile connections complete loading)
     const safetyTimer = setTimeout(() => {
       if (isMounted) {
         setProgress(100);
         setLoading(false);
       }
-    }, 4000);
+    }, 15000);
 
     return () => {
       isMounted = false;

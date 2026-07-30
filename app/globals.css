@@ -698,6 +698,7 @@ p {
   width: 100%;
   overflow: hidden;
   color: #fff;
+  background: #0a0a0a;
   padding: clamp(7rem, 10vw, 9rem) 0 clamp(4rem, 8vw, 5.5rem);
 }
 
@@ -705,6 +706,7 @@ p {
   position: absolute;
   inset: 0;
   z-index: 0;
+  background: #0a0a0a;
 }
 
 .hero-video-placeholder {

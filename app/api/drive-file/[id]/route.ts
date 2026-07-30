@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { google } from "googleapis";
+import { Readable } from "stream";
 
 function getDriveClient() {
   const clientId = process.env.DRIVE_CLIENT_ID;
@@ -58,6 +59,9 @@ export async function GET(
         }
       );
 
+      const nodeStream = gdriveStream.data as Readable;
+      const webStream = Readable.toWeb(nodeStream);
+
       const headers = new Headers({
         "Content-Range": `bytes ${start}-${end}/${fileSize}`,
         "Accept-Ranges": "bytes",
@@ -66,7 +70,7 @@ export async function GET(
         "Cache-Control": "public, max-age=31536000, immutable",
       });
 
-      return new NextResponse(gdriveStream.data as any, {
+      return new NextResponse(webStream as any, {
         status: 206,
         headers,
       });
@@ -78,6 +82,9 @@ export async function GET(
       { responseType: "stream" }
     );
 
+    const nodeStream = gdriveStream.data as Readable;
+    const webStream = Readable.toWeb(nodeStream);
+
     const headers = new Headers({
       "Accept-Ranges": "bytes",
       "Content-Type": mimeType,
@@ -88,7 +95,7 @@ export async function GET(
       headers.set("Content-Length", fileSize.toString());
     }
 
-    return new NextResponse(gdriveStream.data as any, {
+    return new NextResponse(webStream as any, {
       status: 200,
       headers,
     });

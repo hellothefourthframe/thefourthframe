@@ -120,13 +120,8 @@ export default function AdminDashboard() {
     oldPath?: string
   ): Promise<string | null> => {
     if (type === "video") {
-      if (!isAllowedVideoType(file.type)) {
-        showToast("Only MP4, WEBM, MOV, AVI, or OGG videos are allowed", "err");
-        return null;
-      }
-
-      if (file.size > MAX_ADMIN_VIDEO_BYTES) {
-        showToast(`Video must be ${formatMaxVideoSize(MAX_ADMIN_VIDEO_BYTES)} or smaller`, "err");
+      if (!isAllowedVideoType(file.type, file.name)) {
+        showToast("Only video files (MP4, WEBM, MOV, AVI, OGG, MKV) are allowed", "err");
         return null;
       }
     }
@@ -146,7 +141,15 @@ export default function AdminDashboard() {
     }, 250);
 
     try {
-      const result = await blobUpload(file, type, "/api/admin/upload");
+      const result = await blobUpload(
+        file,
+        type,
+        "/api/admin/upload",
+        (ratio) => {
+          const pct = Math.min(99, Math.round(ratio * 100));
+          setUploadProgress({ active: true, percent: pct, fileName: file.name });
+        }
+      );
       clearInterval(timer);
       setUploadProgress({ active: true, percent: 100, fileName: file.name });
       setTimeout(() => setUploadProgress(null), 800);
@@ -649,7 +652,7 @@ function HeroSection({ content, onSave, onUpload, onDelete, styles }: SectionPro
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>Desktop & Mobile Hero Video</h3>
         <p style={styles.hint}>
-          Upload MP4, WEBM, MOV, AVI, or OGG video (max {formatMaxVideoSize(MAX_ADMIN_VIDEO_BYTES)}). Save Hero Media after upload.
+          Upload video of any size (MP4, WEBM, MOV, AVI, OGG, MKV). Automatic chunked upload enabled. Save Hero Media after upload.
         </p>
 
         {media.desktopVideo ? (
@@ -1514,7 +1517,7 @@ function FooterSection({ content, onSave, onUpload, onDelete, styles }: SectionP
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>CTA Video</h3>
         <p style={styles.hint}>
-          Upload MP4, WEBM, MOV, AVI, or OGG video (max {formatMaxVideoSize(MAX_ADMIN_VIDEO_BYTES)}). Save Footer after upload.
+          Upload video of any size (MP4, WEBM, MOV, AVI, OGG, MKV). Automatic chunked upload enabled. Save Footer after upload.
         </p>
         {footer.ctaVideoSrc ? (
           <div style={styles.mediaPreview}>

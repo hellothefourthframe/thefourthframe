@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatMediaUrl } from "../lib/video";
 import type { HeroMedia } from "../lib/types";
 
@@ -9,27 +9,46 @@ interface HeroVideoProps {
 }
 
 export default function HeroVideo({ heroMedia }: HeroVideoProps) {
-  const [activeSrc, setActiveSrc] = useState(heroMedia.desktopVideo);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [activeSrc, setActiveSrc] = useState<string>(() => {
+    const mobile = heroMedia.mobileVideo?.trim();
+    const desktop = heroMedia.desktopVideo?.trim();
+    return desktop || mobile || "";
+  });
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 767px)");
-
     const updateSrc = () => {
-      const mobileVideo = heroMedia.mobileVideo.trim();
-      const desktopVideo = heroMedia.desktopVideo.trim();
-      setActiveSrc(mediaQuery.matches && mobileVideo ? mobileVideo : desktopVideo);
+      const isMobile = window.innerWidth <= 767;
+      const mobileVideo = heroMedia.mobileVideo?.trim();
+      const desktopVideo = heroMedia.desktopVideo?.trim();
+
+      // If mobile view but no separate mobile video uploaded, seamlessly fall back to desktop video
+      const chosen = isMobile && mobileVideo ? mobileVideo : (desktopVideo || mobileVideo || "");
+      setActiveSrc(chosen);
     };
 
     updateSrc();
-    mediaQuery.addEventListener("change", updateSrc);
-    return () => mediaQuery.removeEventListener("change", updateSrc);
+    window.addEventListener("resize", updateSrc);
+    return () => window.removeEventListener("resize", updateSrc);
   }, [heroMedia.desktopVideo, heroMedia.mobileVideo]);
+
+  // Programmatic play trigger to ensure iOS Safari & Chrome mobile start video immediately
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {
+        /* Ignore browser autoplay restrictions if muted */
+      });
+    }
+  }, [activeSrc]);
 
   if (!activeSrc) return null;
 
+  const formattedUrl = formatMediaUrl(activeSrc);
+
   return (
     <video
-      key={activeSrc}
+      ref={videoRef}
+      key={formattedUrl}
       autoPlay
       loop
       muted
@@ -37,7 +56,8 @@ export default function HeroVideo({ heroMedia }: HeroVideoProps) {
       preload="auto"
       className="hero-video-placeholder"
       style={{ width: "100%", height: "100%", objectFit: "cover" }}
-      src={formatMediaUrl(activeSrc)}
-    />
+    >
+      <source src={formattedUrl} type="video/mp4" />
+    </video>
   );
 }

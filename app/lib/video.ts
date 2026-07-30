@@ -1,5 +1,5 @@
-export const MAX_ADMIN_VIDEO_BYTES = 50 * 1024 * 1024;
-export const MAX_PUBLIC_VIDEO_BYTES = 20 * 1024 * 1024;
+export const MAX_ADMIN_VIDEO_BYTES = 5000 * 1024 * 1024; // 5 GB
+export const MAX_PUBLIC_VIDEO_BYTES = 200 * 1024 * 1024; // 200 MB
 
 export const ALLOWED_VIDEO_MIME_TYPES = [
   "video/mp4",
@@ -7,10 +7,12 @@ export const ALLOWED_VIDEO_MIME_TYPES = [
   "video/quicktime",
   "video/x-msvideo",
   "video/ogg",
+  "video/x-matroska",
+  "video/3gpp",
 ] as const;
 
 export const VIDEO_FILE_ACCEPT =
-  "video/mp4,video/webm,video/quicktime,video/x-msvideo,video/ogg,.mp4,.webm,.mov,.avi,.ogv";
+  "video/*,.mp4,.webm,.mov,.avi,.ogv,.mkv,.m4v,.3gp";
 
 const mimeByExtension: Record<string, string> = {
   ".mp4": "video/mp4",
@@ -19,9 +21,13 @@ const mimeByExtension: Record<string, string> = {
   ".avi": "video/x-msvideo",
   ".ogv": "video/ogg",
   ".ogg": "video/ogg",
+  ".mkv": "video/x-matroska",
 };
 
-export function isAllowedVideoType(mimeType: string) {
+export function isAllowedVideoType(mimeType: string, fileName?: string) {
+  if (!mimeType && !fileName) return true;
+  if (mimeType && mimeType.startsWith("video/")) return true;
+  if (fileName && /\.(mp4|webm|mov|avi|ogv|ogg|m4v|mkv|3gp)$/i.test(fileName)) return true;
   return ALLOWED_VIDEO_MIME_TYPES.includes(
     mimeType as (typeof ALLOWED_VIDEO_MIME_TYPES)[number]
   );

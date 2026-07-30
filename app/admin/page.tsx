@@ -9,6 +9,7 @@ import {
   formatMediaUrl,
   formatImageUrl,
   isAllowedVideoType,
+  isVideoUrl,
   MAX_ADMIN_VIDEO_BYTES,
   VIDEO_FILE_ACCEPT,
 } from "@/app/lib/video";
@@ -18,7 +19,11 @@ function isManagedUploadPath(filePath: string) {
   if (filePath.startsWith("/uploads/")) {
     return true;
   }
-  if (filePath.includes("googleusercontent.com") || filePath.includes("drive.google.com")) {
+  if (
+    filePath.includes("googleusercontent.com") ||
+    filePath.includes("drive.google.com") ||
+    filePath.includes("/api/drive-file/")
+  ) {
     return true;
   }
   try {
@@ -845,25 +850,32 @@ function ServicesSection({ content, onSave, onUpload, onDelete, styles }: Sectio
 
             {videoSrc ? (
               <div style={styles.mediaPreview}>
-                <video src={formatMediaUrl(videoSrc)} style={styles.previewVideo} controls muted />
+                {isVideoUrl(videoSrc) ? (
+                  <video src={formatMediaUrl(videoSrc)} style={styles.previewVideo} controls muted autoPlay playsInline />
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={formatImageUrl(videoSrc)} alt={service.title || "Service media"} style={{ ...styles.previewVideo, objectFit: "cover" }} />
+                )}
                 <div style={styles.mediaActions}>
                   <span style={styles.mediaPath}>{videoSrc}</span>
-                  <button style={styles.removeBtn} onClick={() => removeServiceVideo(i)}>Remove Video</button>
+                  <button style={styles.removeBtn} onClick={() => removeServiceVideo(i)}>Remove Media</button>
                 </div>
               </div>
             ) : (
-              <p style={styles.noMedia}>No video set for this service.</p>
+              <p style={styles.noMedia}>No media (video or image) set for this service.</p>
             )}
-            <label style={styles.uploadLabel}>
-              {uploading === i ? "Uploading..." : "Upload Video (MP4)"}
-              <input
-                type="file"
-                accept="video/mp4,video/webm,video/quicktime"
-                onChange={(e) => handleVideoUpload(e, i)}
-                style={styles.fileInput}
-                disabled={uploading !== null}
-              />
-            </label>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <label style={styles.uploadLabel}>
+                {uploading === i ? "Uploading..." : "Upload Video"}
+                <input
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/ogg"
+                  onChange={(e) => handleVideoUpload(e, i)}
+                  style={styles.fileInput}
+                  disabled={uploading !== null}
+                />
+              </label>
+            </div>
 
             <div style={{ marginTop: "1.2rem" }}>
               <h5 style={{ ...styles.subTitle, fontSize: "0.75rem", marginBottom: "0.5rem" }}>Includes (Bullet Points)</h5>

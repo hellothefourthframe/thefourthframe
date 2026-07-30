@@ -2,7 +2,7 @@
 
 import { motion, useInView } from "motion/react";
 import { useRef, useState } from "react";
-import { formatMediaUrl } from "../lib/video";
+import { formatMediaUrl, formatImageUrl, isVideoUrl } from "../lib/video";
 import type { SectionHeader, Service } from "../lib/types";
 
 const cardReveal = {
@@ -20,7 +20,7 @@ interface ServicesProps {
 function ServiceCard({ service, index, isInView }: { service: Service; index: number; isInView: boolean }) {
   const [isFlipped, setIsFlipped] = useState(false);
   const mediaSrc = service.video || service.image || "";
-  const isVideo = mediaSrc.endsWith(".mp4") || mediaSrc.endsWith(".webm") || mediaSrc.includes("blob");
+  const isVideo = isVideoUrl(mediaSrc);
 
   return (
     <motion.div
@@ -66,6 +66,7 @@ function ServiceCard({ service, index, isInView }: { service: Service; index: nu
               loop
               muted
               playsInline
+              preload="auto"
               style={{
                 width: "100%",
                 height: "100%",
@@ -78,8 +79,10 @@ function ServiceCard({ service, index, isInView }: { service: Service; index: nu
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               key={mediaSrc}
-              src={mediaSrc}
-              alt={service.title}
+              src={formatImageUrl(mediaSrc)}
+              alt={service.title || "Service"}
+              loading="eager"
+              decoding="async"
               style={{
                 width: "100%",
                 height: "100%",

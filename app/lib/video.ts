@@ -37,6 +37,30 @@ export function formatMaxVideoSize(bytes: number) {
   return `${Math.round(bytes / (1024 * 1024))}MB`;
 }
 
+export function isVideoUrl(url: string | null | undefined): boolean {
+  if (!url || typeof url !== "string") return false;
+  const cleanUrl = url.trim().toLowerCase();
+  if (!cleanUrl) return false;
+
+  if (cleanUrl.includes("/api/drive-file/")) return true;
+  if (/\.(mp4|webm|mov|avi|ogv|ogg|m4v|mkv|3gp)(\?.*)?$/i.test(cleanUrl)) return true;
+  if (cleanUrl.startsWith("blob:") || cleanUrl.startsWith("data:video/")) return true;
+
+  return false;
+}
+
+export function isImageUrl(url: string | null | undefined): boolean {
+  if (!url || typeof url !== "string") return false;
+  const cleanUrl = url.trim().toLowerCase();
+  if (!cleanUrl) return false;
+
+  if (cleanUrl.includes("googleusercontent.com/d/")) return true;
+  if (/\.(jpg|jpeg|png|gif|webp|svg|avif|bmp|tiff)(\?.*)?$/i.test(cleanUrl)) return true;
+  if (cleanUrl.startsWith("data:image/")) return true;
+
+  return !isVideoUrl(url);
+}
+
 export function formatMediaUrl(url: string | null | undefined): string {
   if (!url) return "";
 
@@ -75,3 +99,4 @@ export function formatImageUrl(url: string | null | undefined): string {
 
   return url;
 }
+

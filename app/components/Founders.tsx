@@ -3,6 +3,7 @@
 import { motion, useInView } from "motion/react";
 import { useRef } from "react";
 import Image from "next/image";
+import { formatImageUrl } from "../lib/video";
 import type { SectionHeader, Founder } from "../lib/types";
 
 interface FoundersProps {
@@ -85,7 +86,7 @@ export default function Founders({ foundersSection, founders }: FoundersProps) {
               <div className="absolute inset-0 z-0">
                 <Image
                   key={founder.image}
-                  src={founder.image}
+                  src={formatImageUrl(founder.image)}
                   alt={founder.name}
                   fill
                   quality={95}

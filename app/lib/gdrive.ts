@@ -128,13 +128,17 @@ export async function uploadToGoogleDrive(
   }
 
   // Make the file publicly accessible to anyone with link for viewing
-  await drive.permissions.create({
-    fileId: fileId,
-    requestBody: {
-      role: "reader",
-      type: "anyone",
-    },
-  });
+  try {
+    await drive.permissions.create({
+      fileId: fileId,
+      requestBody: {
+        role: "reader",
+        type: "anyone",
+      },
+    });
+  } catch (permErr) {
+    console.warn(`Permission set warning for Drive file ${fileId}:`, permErr);
+  }
 
   // Direct public viewable URL format for images/videos
   const isVideo =
@@ -169,7 +173,9 @@ export async function deleteFromGoogleDrive(filePathOrId: string): Promise<boole
   }
 
   let fileId = filePathOrId;
-  if (filePathOrId.includes("googleusercontent.com/d/")) {
+  if (filePathOrId.includes("/api/drive-file/")) {
+    fileId = filePathOrId.split("/api/drive-file/")[1]?.split("?")[0] || filePathOrId;
+  } else if (filePathOrId.includes("googleusercontent.com/d/")) {
     const parts = filePathOrId.split("/d/");
     fileId = parts[1]?.split("?")[0] || filePathOrId;
   } else if (filePathOrId.includes("id=")) {

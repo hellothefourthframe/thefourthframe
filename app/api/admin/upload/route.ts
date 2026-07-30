@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getAdminFromCookies } from "@/app/lib/auth";
 import { uploadToGoogleDrive, deleteFromGoogleDrive } from "@/app/lib/gdrive";
 
+export const maxDuration = 60;
+
 // POST — Admin upload to Google Drive
 export async function POST(request: Request) {
   try {

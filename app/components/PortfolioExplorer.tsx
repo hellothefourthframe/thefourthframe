@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { motion, useInView } from "motion/react";
 import { useRef } from "react";
+import { formatImageUrl } from "../lib/video";
 import type { SectionHeader, Model } from "../lib/types";
 
 interface PortfolioExplorerProps {
@@ -89,7 +90,7 @@ export default function PortfolioExplorer({ modelsSection, models }: PortfolioEx
               <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
                 <Image
                   key={model.image}
-                  src={model.image}
+                  src={formatImageUrl(model.image)}
                   alt={model.name}
                   fill
                   quality={95}

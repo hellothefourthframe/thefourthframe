@@ -16,12 +16,14 @@ export default async function Home() {
   if (content.site?.logo) mediaToPreload.push(content.site.logo);
   if (content.heroMedia?.desktopVideo) mediaToPreload.push(content.heroMedia.desktopVideo);
   if (content.heroMedia?.mobileVideo) mediaToPreload.push(content.heroMedia.mobileVideo);
+  if (content.footer?.ctaVideoSrc) mediaToPreload.push(content.footer.ctaVideoSrc);
 
   content.founders?.forEach((f) => {
     if (f.image) mediaToPreload.push(f.image);
   });
   content.services?.forEach((s) => {
-    if (s.image) mediaToPreload.push(s.image);
+    const src = s.video || s.image;
+    if (src) mediaToPreload.push(src);
   });
   content.models?.forEach((m) => {
     if (m.image) mediaToPreload.push(m.image);

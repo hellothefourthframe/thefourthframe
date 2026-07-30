@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Image from "next/image";
 
-import { formatMediaUrl } from "../lib/video";
+import { formatMediaUrl, isVideoUrl } from "../lib/video";
 
 interface PreloaderProps {
   logo?: string;
@@ -52,9 +52,7 @@ export default function Preloader({
     // Preload each image/video
     rawUrls.forEach((rawUrl) => {
       const url = formatMediaUrl(rawUrl);
-      const isVideo =
-        url.match(/\.(mp4|webm|mov|avi|ogg)(\?.*)?$/i) ||
-        url.includes("export=download");
+      const isVideo = isVideoUrl(rawUrl) || isVideoUrl(url);
 
       if (isVideo) {
         const video = document.createElement("video");

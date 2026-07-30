@@ -631,7 +631,10 @@ function HeroSection({ content, onSave, onUpload, onDelete, styles }: SectionPro
       if (isManagedUploadPath(media.desktopVideo) && onDelete) {
         await onDelete(media.desktopVideo);
       }
-      const updatedMedia = { ...media, desktopVideo: path };
+      if (isManagedUploadPath(media.mobileVideo) && onDelete && media.mobileVideo !== media.desktopVideo) {
+        await onDelete(media.mobileVideo);
+      }
+      const updatedMedia = { ...media, desktopVideo: path, mobileVideo: path };
       setMedia(updatedMedia);
       await onSave({ heroMedia: updatedMedia });
     }
@@ -644,7 +647,12 @@ function HeroSection({ content, onSave, onUpload, onDelete, styles }: SectionPro
     if (isManagedUploadPath(media.desktopVideo) && onDelete) {
       await onDelete(media.desktopVideo);
     }
-    setMedia({ ...media, desktopVideo: "" });
+    if (isManagedUploadPath(media.mobileVideo) && onDelete && media.mobileVideo !== media.desktopVideo) {
+      await onDelete(media.mobileVideo);
+    }
+    const updatedMedia = { ...media, desktopVideo: "", mobileVideo: "" };
+    setMedia(updatedMedia);
+    await onSave({ heroMedia: updatedMedia });
   };
 
   return (

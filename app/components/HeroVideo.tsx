@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { formatMediaUrl } from "../lib/video";
 import type { HeroMedia } from "../lib/types";
 
@@ -10,27 +10,11 @@ interface HeroVideoProps {
 
 export default function HeroVideo({ heroMedia }: HeroVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [activeSrc, setActiveSrc] = useState<string>(() => {
-    const mobile = heroMedia.mobileVideo?.trim();
-    const desktop = heroMedia.desktopVideo?.trim();
-    return desktop || mobile || "";
-  });
 
-  useEffect(() => {
-    const updateSrc = () => {
-      const isMobile = window.innerWidth <= 767;
-      const mobileVideo = heroMedia.mobileVideo?.trim();
-      const desktopVideo = heroMedia.desktopVideo?.trim();
-
-      // If mobile view but no separate mobile video uploaded, seamlessly fall back to desktop video
-      const chosen = isMobile && mobileVideo ? mobileVideo : (desktopVideo || mobileVideo || "");
-      setActiveSrc(chosen);
-    };
-
-    updateSrc();
-    window.addEventListener("resize", updateSrc);
-    return () => window.removeEventListener("resize", updateSrc);
-  }, [heroMedia.desktopVideo, heroMedia.mobileVideo]);
+  // Always prioritize the hero video set in admin (desktopVideo or mobileVideo)
+  const videoSrc =
+    heroMedia.desktopVideo?.trim() || heroMedia.mobileVideo?.trim() || "";
+  const formattedUrl = formatMediaUrl(videoSrc);
 
   // Programmatic play trigger to ensure iOS Safari & Chrome mobile start video immediately
   useEffect(() => {
@@ -39,11 +23,9 @@ export default function HeroVideo({ heroMedia }: HeroVideoProps) {
         /* Ignore browser autoplay restrictions if muted */
       });
     }
-  }, [activeSrc]);
+  }, [formattedUrl]);
 
-  if (!activeSrc) return null;
-
-  const formattedUrl = formatMediaUrl(activeSrc);
+  if (!formattedUrl) return null;
 
   return (
     <video
@@ -53,9 +35,12 @@ export default function HeroVideo({ heroMedia }: HeroVideoProps) {
       loop
       muted
       playsInline
+      // @ts-expect-error legacy webkit attribute for mobile safari
+      webkit-playsinline="true"
       preload="auto"
       className="hero-video-placeholder"
       style={{ width: "100%", height: "100%", objectFit: "cover" }}
+      src={formattedUrl}
     >
       <source src={formattedUrl} type="video/mp4" />
     </video>

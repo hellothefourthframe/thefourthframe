@@ -5,6 +5,7 @@ import PortfolioExplorer from "./components/PortfolioExplorer";
 import ContactSection from "./components/ContactSection";
 import Preloader from "./components/Preloader";
 import { getSiteContent } from "./lib/data";
+import { formatMediaUrl } from "./lib/video";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -12,10 +13,15 @@ export const revalidate = 0;
 export default async function Home() {
   const content = await getSiteContent();
 
+  const heroVideoSrc =
+    content.heroMedia?.desktopVideo?.trim() ||
+    content.heroMedia?.mobileVideo?.trim() ||
+    "";
+  const formattedHeroUrl = formatMediaUrl(heroVideoSrc);
+
   const mediaToPreload: string[] = [];
+  if (heroVideoSrc) mediaToPreload.push(heroVideoSrc);
   if (content.site?.logo) mediaToPreload.push(content.site.logo);
-  if (content.heroMedia?.desktopVideo) mediaToPreload.push(content.heroMedia.desktopVideo);
-  if (content.heroMedia?.mobileVideo) mediaToPreload.push(content.heroMedia.mobileVideo);
   if (content.footer?.ctaVideoSrc) mediaToPreload.push(content.footer.ctaVideoSrc);
 
   content.founders?.forEach((f) => {
@@ -31,6 +37,14 @@ export default async function Home() {
 
   return (
     <main>
+      {formattedHeroUrl ? (
+        <link
+          rel="preload"
+          href={formattedHeroUrl}
+          as="fetch"
+          crossOrigin="anonymous"
+        />
+      ) : null}
       <Preloader
         logo={content.site.logo}
         siteName={content.site.name}

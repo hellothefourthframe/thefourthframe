@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatMediaUrl } from "../lib/video";
 import type { HeroMedia } from "../lib/types";
 
 interface HeroVideoProps {
@@ -36,7 +37,7 @@ export default function HeroVideo({ heroMedia }: HeroVideoProps) {
       preload="auto"
       className="hero-video-placeholder"
       style={{ width: "100%", height: "100%", objectFit: "cover" }}
-      src={activeSrc}
+      src={formatMediaUrl(activeSrc)}
     />
   );
 }

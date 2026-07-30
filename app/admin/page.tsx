@@ -6,16 +6,21 @@ import type { ModelSubmission, SiteContent, ContactQuery } from "@/app/lib/types
 import { uploadFile as blobUpload } from "@/app/lib/upload";
 import {
   formatMaxVideoSize,
+  formatMediaUrl,
+  formatImageUrl,
   isAllowedVideoType,
   MAX_ADMIN_VIDEO_BYTES,
   VIDEO_FILE_ACCEPT,
 } from "@/app/lib/video";
 
 function isManagedUploadPath(filePath: string) {
+  if (!filePath) return false;
   if (filePath.startsWith("/uploads/")) {
     return true;
   }
-
+  if (filePath.includes("googleusercontent.com") || filePath.includes("drive.google.com")) {
+    return true;
+  }
   try {
     const url = new URL(filePath);
     return (
@@ -104,7 +109,11 @@ export default function AdminDashboard() {
     }
   };
 
-  const uploadFile = async (file: File, type: "image" | "video"): Promise<string | null> => {
+  const uploadFile = async (
+    file: File,
+    type: "image" | "video",
+    oldPath?: string
+  ): Promise<string | null> => {
     if (type === "video") {
       if (!isAllowedVideoType(file.type)) {
         showToast("Only MP4, WEBM, MOV, AVI, or OGG videos are allowed", "err");
@@ -115,6 +124,10 @@ export default function AdminDashboard() {
         showToast(`Video must be ${formatMaxVideoSize(MAX_ADMIN_VIDEO_BYTES)} or smaller`, "err");
         return null;
       }
+    }
+
+    if (oldPath && isManagedUploadPath(oldPath)) {
+      await deleteFile(oldPath);
     }
 
     setUploadProgress({ active: true, percent: 15, fileName: file.name });
@@ -420,7 +433,7 @@ function SiteSection({ content, onSave, onUpload, styles }: SectionProps) {
     const file = e.target.files?.[0];
     if (!file || !onUpload) return;
     setUploadingLogo(true);
-    const uploadedUrl = await onUpload(file, "image");
+    const uploadedUrl = await onUpload(file, "image", site.logo);
     setUploadingLogo(false);
     if (uploadedUrl) {
       setSite((prev) => ({ ...prev, logo: uploadedUrl }));
@@ -438,7 +451,7 @@ function SiteSection({ content, onSave, onUpload, styles }: SectionProps) {
         <h3 style={styles.subTitle}>Website Logo</h3>
         {site.logo ? (
           <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "0.75rem" }}>
-            <img src={site.logo} alt="Site Logo Preview" style={{ height: "48px", width: "auto", objectFit: "contain", background: "rgba(255,255,255,0.05)", padding: "0.5rem", borderRadius: "8px" }} />
+            <img src={site.logo} alt="Site Logo Preview" style={{ height: "48px", width: "auto", objectFit: "contain", background: "rgba(255,255,255,0.05)", padding: "0.5rem", borderRadius: "8px" }} referrerPolicy="no-referrer" />
             <span style={{ fontSize: "0.8rem", color: styles.textMuted.color }}>Current Logo</span>
           </div>
         ) : null}
@@ -610,7 +623,9 @@ function HeroSection({ content, onSave, onUpload, onDelete, styles }: SectionPro
       if (isManagedUploadPath(media.desktopVideo) && onDelete) {
         await onDelete(media.desktopVideo);
       }
-      setMedia({ ...media, desktopVideo: path });
+      const updatedMedia = { ...media, desktopVideo: path };
+      setMedia(updatedMedia);
+      await onSave({ heroMedia: updatedMedia });
     }
 
     setUploading(false);
@@ -634,7 +649,7 @@ function HeroSection({ content, onSave, onUpload, onDelete, styles }: SectionPro
 
         {media.desktopVideo ? (
           <div style={styles.mediaPreview}>
-            <video src={media.desktopVideo} style={styles.previewVideo} controls muted />
+            <video src={formatMediaUrl(media.desktopVideo)} style={styles.previewVideo} controls muted />
             <div style={styles.mediaActions}>
               <span style={styles.mediaPath}>{media.desktopVideo}</span>
               <button style={styles.removeBtn} onClick={removeVideo}>Remove Video</button>
@@ -684,7 +699,10 @@ function FoundersSection({ content, onSave, onUpload, onDelete, styles }: Sectio
       if (isManagedUploadPath(founders[i].image) && onDelete) {
         await onDelete(founders[i].image);
       }
-      updateFounder(i, "image", path);
+      const updatedFounders = [...founders];
+      updatedFounders[i] = { ...updatedFounders[i], image: path };
+      setFounders(updatedFounders);
+      await onSave({ foundersSection: section, founders: updatedFounders });
     }
 
     setUploading(null);
@@ -713,7 +731,7 @@ function FoundersSection({ content, onSave, onUpload, onDelete, styles }: Sectio
 
           {f.image && (
             <div style={styles.mediaPreview}>
-              <img src={f.image} alt={f.name} style={styles.previewImg} />
+              <img src={f.image} alt={f.name} style={styles.previewImg} referrerPolicy="no-referrer" />
               <span style={styles.mediaPath}>{f.image}</span>
             </div>
           )}
@@ -751,7 +769,10 @@ function ServicesSection({ content, onSave, onUpload, onDelete, styles }: Sectio
       if (oldMedia && isManagedUploadPath(oldMedia) && onDelete) {
         await onDelete(oldMedia);
       }
-      updateService(i, "video", path);
+      const updatedServices = [...services];
+      updatedServices[i] = { ...updatedServices[i], video: path };
+      setServices(updatedServices);
+      await onSave({ servicesSection: section, services: updatedServices });
     }
     setUploading(null);
     e.target.value = "";
@@ -824,7 +845,7 @@ function ServicesSection({ content, onSave, onUpload, onDelete, styles }: Sectio
 
             {videoSrc ? (
               <div style={styles.mediaPreview}>
-                <video src={videoSrc} style={styles.previewVideo} controls muted />
+                <video src={formatMediaUrl(videoSrc)} style={styles.previewVideo} controls muted />
                 <div style={styles.mediaActions}>
                   <span style={styles.mediaPath}>{videoSrc}</span>
                   <button style={styles.removeBtn} onClick={() => removeServiceVideo(i)}>Remove Video</button>
@@ -904,7 +925,10 @@ function ModelsSection({ content, onSave, onUpload, onDelete, styles }: SectionP
       if (isManagedUploadPath(models[i].image) && onDelete) {
         await onDelete(models[i].image);
       }
-      updateModel(i, "image", path);
+      const updatedModels = [...models];
+      updatedModels[i] = { ...updatedModels[i], image: path };
+      setModels(updatedModels);
+      await onSave({ modelsSection: section, models: updatedModels });
     }
     setUploading(null);
     e.target.value = "";
@@ -936,7 +960,7 @@ function ModelsSection({ content, onSave, onUpload, onDelete, styles }: SectionP
 
           {model.image && (
             <div style={styles.mediaPreview}>
-              <img src={model.image} alt={model.name} style={styles.previewImg} />
+              <img src={model.image} alt={model.name} style={styles.previewImg} referrerPolicy="no-referrer" />
               <span style={styles.mediaPath}>{model.image}</span>
             </div>
           )}
@@ -1379,11 +1403,14 @@ function ModelSubmissionsSection({ showToast, styles }: { showToast: (msg: strin
                         SUBMITTED PHOTOS ({sub.images?.length || 0})
                       </span>
                       <div style={styles.submissionImageGrid}>
-                        {sub.images?.map((img, i) => (
-                          <a key={i} href={img} target="_blank" rel="noreferrer" style={styles.submissionMediaLink}>
-                            <img src={img} alt={`Submission photo ${i + 1}`} style={styles.submissionImg} />
-                          </a>
-                        ))}
+                        {sub.images?.map((img, i) => {
+                          const formattedImg = formatImageUrl(img);
+                          return (
+                            <a key={i} href={formattedImg} target="_blank" rel="noreferrer" style={styles.submissionMediaLink}>
+                              <img src={formattedImg} alt={`Submission photo ${i + 1}`} style={styles.submissionImg} referrerPolicy="no-referrer" />
+                            </a>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -1392,7 +1419,7 @@ function ModelSubmissionsSection({ showToast, styles }: { showToast: (msg: strin
                         <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#C9A84C", letterSpacing: "0.1em", display: "block", marginBottom: "0.5rem" }}>
                           SUBMITTED VIDEO
                         </span>
-                        <video src={sub.video} controls style={{ width: "100%", maxWidth: "380px", borderRadius: "8px" }} />
+                        <video src={formatMediaUrl(sub.video)} controls style={{ width: "100%", maxWidth: "380px", borderRadius: "8px" }} />
                       </div>
                     )}
                   </div>
@@ -1453,7 +1480,9 @@ function FooterSection({ content, onSave, onUpload, onDelete, styles }: SectionP
       if (isManagedUploadPath(footer.ctaVideoSrc) && onDelete) {
         await onDelete(footer.ctaVideoSrc);
       }
-      setFooter({ ...footer, ctaVideoSrc: path });
+      const updatedFooter = { ...footer, ctaVideoSrc: path };
+      setFooter(updatedFooter);
+      await onSave({ footer: updatedFooter });
     }
 
     setUploading(false);
@@ -1477,7 +1506,7 @@ function FooterSection({ content, onSave, onUpload, onDelete, styles }: SectionP
         </p>
         {footer.ctaVideoSrc ? (
           <div style={styles.mediaPreview}>
-            <video src={footer.ctaVideoSrc} style={styles.previewVideo} controls muted />
+            <video src={formatMediaUrl(footer.ctaVideoSrc)} style={styles.previewVideo} controls muted />
             <div style={styles.mediaActions}>
               <span style={styles.mediaPath}>{footer.ctaVideoSrc}</span>
               <button style={styles.removeBtn} onClick={removeCtaVideo}>Remove</button>

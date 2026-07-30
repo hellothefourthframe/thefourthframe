@@ -8,6 +8,8 @@ import { scrollToHash } from "../lib/scrollToHash";
 import { NAV_ITEMS } from "../lib/constants";
 import type { SiteData, SocialLink, FooterData } from "../lib/types";
 
+import { formatMediaUrl } from "../lib/video";
+
 interface FooterProps {
   site: SiteData;
   socialLinks: SocialLink[];
@@ -89,7 +91,7 @@ export default function Footer({ site, socialLinks, footer }: FooterProps) {
               muted
               playsInline
               preload="auto"
-              src={footer.ctaVideoSrc}
+              src={formatMediaUrl(footer.ctaVideoSrc)}
               style={{
                 position: "absolute",
                 inset: 0,

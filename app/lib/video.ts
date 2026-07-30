@@ -36,3 +36,42 @@ export function getVideoMimeType(source: string) {
 export function formatMaxVideoSize(bytes: number) {
   return `${Math.round(bytes / (1024 * 1024))}MB`;
 }
+
+export function formatMediaUrl(url: string | null | undefined): string {
+  if (!url) return "";
+
+  // Convert Google Drive video URLs to our high-performance HTTP range streaming proxy
+  if (url.includes("drive.google.com") || url.includes("googleusercontent.com")) {
+    let fileId = url;
+    if (url.includes("/d/")) {
+      fileId = url.split("/d/")[1]?.split("/")[0]?.split("?")[0] || url;
+    } else if (url.includes("id=")) {
+      fileId = url.match(/id=([^&]+)/)?.[1] || url;
+    }
+
+    if (fileId && !fileId.startsWith("http")) {
+      return `/api/drive-file/${fileId}`;
+    }
+  }
+
+  return url;
+}
+
+export function formatImageUrl(url: string | null | undefined): string {
+  if (!url) return "";
+
+  if (url.includes("drive.google.com") || url.includes("googleusercontent.com")) {
+    let fileId = url;
+    if (url.includes("/d/")) {
+      fileId = url.split("/d/")[1]?.split("/")[0]?.split("?")[0] || url;
+    } else if (url.includes("id=")) {
+      fileId = url.match(/id=([^&]+)/)?.[1] || url;
+    }
+
+    if (fileId && !fileId.startsWith("http")) {
+      return `https://lh3.googleusercontent.com/d/${fileId}`;
+    }
+  }
+
+  return url;
+}

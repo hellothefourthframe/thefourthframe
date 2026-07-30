@@ -1,89 +1,85 @@
 import { NextResponse } from "next/server";
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
-import { del } from "@vercel/blob";
 import { getAdminFromCookies } from "@/app/lib/auth";
-import {
-  ALLOWED_VIDEO_MIME_TYPES,
-  MAX_ADMIN_VIDEO_BYTES,
-} from "@/app/lib/video";
+import { uploadToGoogleDrive, deleteFromGoogleDrive } from "@/app/lib/gdrive";
 
-const imageContentTypes = [
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-];
-
-const videoContentTypes = [...ALLOWED_VIDEO_MIME_TYPES];
-
-// POST — Generate upload token (admin only) + handle upload completion
+// POST — Admin upload to Google Drive
 export async function POST(request: Request) {
-  const body = (await request.json()) as HandleUploadBody;
-
   try {
-    const jsonResponse = await handleUpload({
-      body,
-      request,
-      onBeforeGenerateToken: async (pathname, clientPayload) => {
-        // Auth check — runs BEFORE any upload token is issued
-        const admin = await getAdminFromCookies();
+    const admin = await getAdminFromCookies();
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-        if (!admin) {
-          throw new Error("Unauthorized");
-        }
+    const formData = await request.formData();
 
-        let type: string | null = null;
-        try {
-          type = clientPayload ? JSON.parse(clientPayload).type : null;
-        } catch {
-          type = null;
-        }
+    const fileEntries = [
+      ...formData.getAll("file"),
+      ...formData.getAll("files"),
+      ...formData.getAll("images"),
+      ...formData.getAll("video"),
+    ];
 
-        if (type !== "image" && type !== "video") {
-          throw new Error("Invalid file type. Must be 'image' or 'video'");
-        }
+    const files = fileEntries.filter(
+      (item): item is File => item instanceof File && item.size > 0
+    );
 
-        return {
-          allowedContentTypes:
-            type === "image" ? imageContentTypes : videoContentTypes,
-          maximumSizeInBytes:
-            type === "video" ? MAX_ADMIN_VIDEO_BYTES : 10 * 1024 * 1024,
-          addRandomSuffix: true,
-          tokenPayload: JSON.stringify({ type }),
-          validUntil: Date.now() + 60 * 60 * 1000,
-        };
-      },
-      onUploadCompleted: async ({ blob, tokenPayload }) => {
-        // Optional: log or persist to DB after upload finishes
-        console.log("Upload completed:", blob.url, tokenPayload);
-      },
+    if (files.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "No files uploaded" },
+        { status: 400 }
+      );
+    }
+
+    const uploadedResults = [];
+    for (const file of files) {
+      const result = await uploadToGoogleDrive(file);
+      uploadedResults.push(result);
+    }
+
+    if (uploadedResults.length === 1) {
+      const first = uploadedResults[0];
+      return NextResponse.json({
+        success: true,
+        path: first.url,
+        url: first.url,
+        pathname: first.id,
+        fileId: first.id,
+        name: first.name,
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      files: uploadedResults.map((r) => ({
+        path: r.url,
+        url: r.url,
+        pathname: r.id,
+        fileId: r.id,
+        name: r.name,
+      })),
+      path: uploadedResults[0].url,
     });
-
-    return NextResponse.json(jsonResponse);
   } catch (err) {
-    console.error("Upload error:", err);
-
+    console.error("Admin Google Drive Upload Error:", err);
     return NextResponse.json(
       {
         success: false,
         error: err instanceof Error ? err.message : "Upload failed",
       },
-      { status: 400 }
+      { status: 500 }
     );
   }
 }
 
-// DELETE — Remove uploaded file (admin only) — unchanged
+// DELETE — Admin delete file from Google Drive
 export async function DELETE(request: Request) {
   try {
     const admin = await getAdminFromCookies();
-
     if (!admin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { filePath } = await request.json();
-
     if (!filePath) {
       return NextResponse.json(
         { error: "Missing file path" },
@@ -91,14 +87,10 @@ export async function DELETE(request: Request) {
       );
     }
 
-    await del(filePath, {
-      token: process.env.BLOB_READ_WRITE_TOKEN,
-    });
-
+    await deleteFromGoogleDrive(filePath);
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("Delete error:", err);
-
+    console.error("Admin Delete error:", err);
     return NextResponse.json(
       {
         success: false,

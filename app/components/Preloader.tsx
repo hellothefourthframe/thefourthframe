@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Image from "next/image";
 
+import { formatMediaUrl } from "../lib/video";
+
 interface PreloaderProps {
   logo?: string;
   siteName?: string;
@@ -19,19 +21,19 @@ export default function Preloader({
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    // Unique list of image & video URLs to preload
-    const allUrls = Array.from(new Set([logo, ...mediaToPreload])).filter(
+    // Unique list of formatted image & video URLs to preload
+    const rawUrls = Array.from(new Set([logo, ...mediaToPreload])).filter(
       (url): url is string => Boolean(url) && typeof url === "string" && url.trim().length > 0
     );
 
-    if (allUrls.length === 0) {
+    if (rawUrls.length === 0) {
       setProgress(100);
-      const t = setTimeout(() => setLoading(false), 800);
+      const t = setTimeout(() => setLoading(false), 400);
       return () => clearTimeout(t);
     }
 
     let loadedCount = 0;
-    const total = allUrls.length;
+    const total = rawUrls.length;
     let isMounted = true;
 
     const updateProgress = () => {
@@ -48,29 +50,57 @@ export default function Preloader({
     };
 
     // Preload each image/video
-    allUrls.forEach((url) => {
-      const isVideo = url.match(/\.(mp4|webm|mov|avi|ogg)(\?.*)?$/i);
+    rawUrls.forEach((rawUrl) => {
+      const url = formatMediaUrl(rawUrl);
+      const isVideo =
+        url.match(/\.(mp4|webm|mov|avi|ogg)(\?.*)?$/i) ||
+        url.includes("export=download");
+
       if (isVideo) {
         const video = document.createElement("video");
-        video.oncanplaythrough = updateProgress;
-        video.onerror = updateProgress;
+        video.muted = true;
+        video.playsInline = true;
+        video.preload = "auto";
+
+        let done = false;
+        const onVideoLoaded = () => {
+          if (!done) {
+            done = true;
+            updateProgress();
+          }
+        };
+
+        video.oncanplaythrough = onVideoLoaded;
+        video.onloadeddata = onVideoLoaded;
+        video.onerror = onVideoLoaded;
+
         video.src = url;
         video.load();
       } else {
         const img = new window.Image();
-        img.onload = updateProgress;
-        img.onerror = updateProgress;
+        img.referrerPolicy = "no-referrer";
+
+        let done = false;
+        const onImgLoaded = () => {
+          if (!done) {
+            done = true;
+            updateProgress();
+          }
+        };
+
+        img.onload = onImgLoaded;
+        img.onerror = onImgLoaded;
         img.src = url;
       }
     });
 
-    // Safety fallback timeout (Max 3.5 seconds max wait)
+    // Safety fallback timeout (Max 4 seconds max wait)
     const safetyTimer = setTimeout(() => {
       if (isMounted) {
         setProgress(100);
         setLoading(false);
       }
-    }, 3500);
+    }, 4000);
 
     return () => {
       isMounted = false;
@@ -123,6 +153,7 @@ export default function Preloader({
                 alt={siteName}
                 fill
                 priority
+                sizes="(max-width: 768px) 96px, 112px"
                 className="object-cover"
               />
             </div>

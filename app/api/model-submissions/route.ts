@@ -33,6 +33,14 @@ function cleanText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function isGoogleDriveUrl(filePath: string) {
+  return (
+    filePath.includes("googleusercontent.com") ||
+    filePath.includes("drive.google.com") ||
+    filePath.startsWith("/api/drive-file/")
+  );
+}
+
 function isBlobUrl(filePath: string) {
   try {
     const url = new URL(filePath);
@@ -52,7 +60,14 @@ function isUploadPath(filePath: string) {
 }
 
 function isValidMediaPath(filePath: string) {
-  return isBlobUrl(filePath) || isUploadPath(filePath);
+  return (
+    isGoogleDriveUrl(filePath) ||
+    isBlobUrl(filePath) ||
+    isUploadPath(filePath) ||
+    filePath.startsWith("http://") ||
+    filePath.startsWith("https://") ||
+    filePath.startsWith("/api/drive-file/")
+  );
 }
 
 function serializeSubmission(submission: StoredSubmission & { _id: ObjectId }) {
@@ -151,6 +166,16 @@ export async function GET() {
 }
 
 async function deleteUpload(filePath: string) {
+  if (isGoogleDriveUrl(filePath)) {
+    try {
+      const { deleteFromGoogleDrive } = await import("@/app/lib/gdrive");
+      await deleteFromGoogleDrive(filePath);
+    } catch (e) {
+      console.error("Failed to delete Google Drive file:", e);
+    }
+    return;
+  }
+
   if (isBlobUrl(filePath)) {
     await del(filePath, {
       token: process.env.BLOB_READ_WRITE_TOKEN,

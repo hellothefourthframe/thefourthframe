@@ -1,88 +1,88 @@
 import { NextResponse } from "next/server";
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
-import { del } from "@vercel/blob";
-import { getAdminFromCookies } from "@/app/lib/auth";
-import {
-  ALLOWED_VIDEO_MIME_TYPES,
-  MAX_PUBLIC_VIDEO_BYTES,
-} from "@/app/lib/video";
+import { uploadToGoogleDrive, deleteFromGoogleDrive } from "@/app/lib/gdrive";
 
-const imageContentTypes = [
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-];
-
-const videoContentTypes = [...ALLOWED_VIDEO_MIME_TYPES];
-
-const MAX_PUBLIC_IMAGE_BYTES = 10 * 1024 * 1024;
-
-// POST — Public upload (used by the model-application contact form)
+// POST — Public upload to Google Drive (used by model-application submission form)
 export async function POST(request: Request) {
-  const body = (await request.json()) as HandleUploadBody;
-
   try {
-    const jsonResponse = await handleUpload({
-      body,
-      request,
-      onBeforeGenerateToken: async (_pathname, clientPayload) => {
-        // NOTE: intentionally no admin check — this is the public form route.
-        let type: string | null = null;
-        try {
-          type = clientPayload ? JSON.parse(clientPayload).type : null;
-        } catch {
-          type = null;
-        }
+    const formData = await request.formData();
 
-        if (type !== "image" && type !== "video") {
-          throw new Error("Invalid file type. Must be 'image' or 'video'");
-        }
+    // Collect all files uploaded under 'file', 'files', 'images', or 'video'
+    const fileEntries = [
+      ...formData.getAll("file"),
+      ...formData.getAll("files"),
+      ...formData.getAll("images"),
+      ...formData.getAll("video"),
+    ];
 
-        return {
-          allowedContentTypes:
-            type === "image" ? imageContentTypes : videoContentTypes,
-          maximumSizeInBytes:
-            type === "video" ? MAX_PUBLIC_VIDEO_BYTES : MAX_PUBLIC_IMAGE_BYTES,
-          addRandomSuffix: true,
-          tokenPayload: JSON.stringify({ type }),
-          validUntil: Date.now() + 60 * 60 * 1000,
-        };
-      },
-      onUploadCompleted: async ({ blob, tokenPayload }) => {
-        console.log("Public upload completed:", blob.url, tokenPayload);
-      },
+    const files = fileEntries.filter(
+      (item): item is File => item instanceof File && item.size > 0
+    );
+
+    if (files.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "No files uploaded" },
+        { status: 400 }
+      );
+    }
+
+    const uploadedResults = [];
+    for (const file of files) {
+      const result = await uploadToGoogleDrive(file);
+      uploadedResults.push(result);
+    }
+
+    if (uploadedResults.length === 1) {
+      const first = uploadedResults[0];
+      return NextResponse.json({
+        success: true,
+        path: first.url,
+        url: first.url,
+        pathname: first.id,
+        fileId: first.id,
+        name: first.name,
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      files: uploadedResults.map((r) => ({
+        path: r.url,
+        url: r.url,
+        pathname: r.id,
+        fileId: r.id,
+        name: r.name,
+      })),
+      path: uploadedResults[0].url,
     });
-
-    return NextResponse.json(jsonResponse);
   } catch (err) {
-    console.error("Upload error:", err);
+    console.error("Google Drive Upload Error:", err);
     return NextResponse.json(
-      { success: false, error: err instanceof Error ? err.message : "Upload failed" },
-      { status: 400 }
+      {
+        success: false,
+        error: err instanceof Error ? err.message : "Upload failed",
+      },
+      { status: 500 }
     );
   }
 }
 
-// DELETE — Keep this admin-only (cleanup should stay protected)
+// DELETE — Remove file from Google Drive
 export async function DELETE(request: Request) {
   try {
-    const admin = await getAdminFromCookies();
-    if (!admin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { filePath } = await request.json();
     if (!filePath) {
-      return NextResponse.json({ error: "Missing file path" }, { status: 400 });
+      return NextResponse.json({ error: "Missing file path or ID" }, { status: 400 });
     }
 
-    await del(filePath, { token: process.env.BLOB_READ_WRITE_TOKEN });
+    await deleteFromGoogleDrive(filePath);
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("Delete error:", err);
+    console.error("Google Drive Delete Error:", err);
     return NextResponse.json(
-      { success: false, error: err instanceof Error ? err.message : "Delete failed" },
+      {
+        success: false,
+        error: err instanceof Error ? err.message : "Delete failed",
+      },
       { status: 500 }
     );
   }

@@ -2,6 +2,7 @@
 
 import { motion, useInView } from "motion/react";
 import { useRef, useState } from "react";
+import { formatMediaUrl } from "../lib/video";
 import type { SectionHeader, Service } from "../lib/types";
 
 const cardReveal = {
@@ -71,7 +72,7 @@ function ServiceCard({ service, index, isInView }: { service: Service; index: nu
                 objectFit: "cover",
               }}
             >
-              <source src={mediaSrc} type="video/mp4" />
+              <source src={formatMediaUrl(mediaSrc)} type="video/mp4" />
             </video>
           ) : (
             /* eslint-disable-next-line @next/next/no-img-element */

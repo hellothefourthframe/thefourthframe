@@ -419,7 +419,7 @@ export default function AdminDashboard() {
 interface SectionProps {
   content: SiteContent;
   onSave: (updates: Partial<SiteContent>) => Promise<void>;
-  onUpload?: (file: File, type: "image" | "video") => Promise<string | null>;
+  onUpload?: (file: File, type: "image" | "video", oldPath?: string) => Promise<string | null>;
   onDelete?: (filePath: string) => Promise<void>;
   styles: AdminStyles;
 }

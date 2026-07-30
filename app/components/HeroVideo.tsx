@@ -35,8 +35,6 @@ export default function HeroVideo({ heroMedia }: HeroVideoProps) {
       loop
       muted
       playsInline
-      // @ts-expect-error legacy webkit attribute for mobile safari
-      webkit-playsinline="true"
       preload="auto"
       className="hero-video-placeholder"
       style={{ width: "100%", height: "100%", objectFit: "cover" }}

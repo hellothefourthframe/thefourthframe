@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "generate-token": "tsx app/lib/generate-refresh-token.ts"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

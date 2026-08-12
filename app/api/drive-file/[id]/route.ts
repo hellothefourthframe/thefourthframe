@@ -99,8 +99,17 @@ export async function GET(
       status: 200,
       headers,
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Drive streaming route error:", err);
+    if (
+      err?.message?.includes("invalid_grant") ||
+      err?.response?.data?.error === "invalid_grant"
+    ) {
+      console.error(
+        "\n[Google Drive Auth Error] DRIVE_REFRESH_TOKEN has expired or been revoked.\n" +
+        "Visit http://localhost:3000/api/auth/google in your browser to re-authenticate and get a new token.\n"
+      );
+    }
     return new NextResponse("Failed to stream media from Google Drive", { status: 500 });
   }
 }
